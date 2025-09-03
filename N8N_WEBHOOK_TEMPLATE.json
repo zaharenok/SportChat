@@ -1,0 +1,151 @@
+{
+  "description": "Шаблон ответа n8n хука для SportChat",
+  "version": "1.0",
+  "template": {
+    "message": "string (required) - Основной ответ пользователю от тренера",
+    "workout_data": {
+      "description": "object (optional) - Структурированные данные о тренировке",
+      "exercises": [
+        {
+          "name_original": "string - Оригинальное название упражнения из сообщения пользователя",
+          "name_normalized": "string - Стандартизированное название упражнения",
+          "weight": "number (optional) - Вес в кг",
+          "sets": "number (optional) - Количество подходов", 
+          "reps": "number (optional) - Количество повторений",
+          "duration_seconds": "number (optional) - Длительность в секундах (для кардио/планки)",
+          "equipment": "string (optional) - Оборудование (штанга, гантели, etc)",
+          "muscle_groups": ["array of strings - Группы мышц"],
+          "confidence": "number 0-1 - Уверенность в распознавании"
+        }
+      ],
+      "workout_type": "string (optional) - strength/cardio/flexibility/mixed",
+      "estimated_duration": "number (optional) - Примерная длительность тренировки в минутах",
+      "intensity_level": "number 1-10 (optional) - Уровень интенсивности",
+      "notes": "string (optional) - Дополнительные заметки"
+    },
+    "calendar_update": {
+      "description": "object (optional) - Обновление календаря тренировок", 
+      "date": "string ISO date - Дата тренировки",
+      "emoji": "string - Эмодзи для календаря (💪🏃🧘🏋️🤸)",
+      "workout_summary": "string - Краткое описание тренировки",
+      "completion_percentage": "number 0-100 - Процент выполнения тренировки",
+      "streak_info": {
+        "current_streak": "number - Текущий стрик в днях",
+        "milestone_reached": "boolean - Достигнут ли майлстоун",
+        "achievement": "string (optional) - Название достижения"
+      }
+    },
+    "recommendations": {
+      "description": "object (optional) - Рекомендации и мотивация",
+      "next_workout_suggestions": ["array of strings - Предложения для следующей тренировки"],
+      "progression_tips": ["array of strings - Советы по прогрессии"],
+      "recovery_advice": "string (optional) - Советы по восстановлению",
+      "form_feedback": "string (optional) - Обратная связь по технике"
+    },
+    "confidence_score": "number 0-1 (required) - Общая уверенность в обработке",
+    "processing_time_ms": "number (required) - Время обработки в миллисекундах", 
+    "llm_model_used": "string (required) - Используемая LLM модель",
+    "language": "string (required) - Язык ответа (ru/en)"
+  },
+  "examples": {
+    "strength_training": {
+      "message": "Отличная силовая тренировка! 💪 Прогресс в жиме лежа +5кг - продолжай в том же духе!",
+      "workout_data": {
+        "exercises": [
+          {
+            "name_original": "жим лежа",
+            "name_normalized": "Bench Press", 
+            "weight": 85,
+            "sets": 3,
+            "reps": 8,
+            "muscle_groups": ["chest", "triceps", "shoulders"],
+            "confidence": 0.95
+          }
+        ],
+        "workout_type": "strength",
+        "estimated_duration": 60,
+        "intensity_level": 8
+      },
+      "calendar_update": {
+        "date": "2025-01-15",
+        "emoji": "💪",
+        "workout_summary": "Силовая: жим лежа 85кг",
+        "completion_percentage": 95,
+        "streak_info": {
+          "current_streak": 6,
+          "milestone_reached": false
+        }
+      },
+      "recommendations": {
+        "next_workout_suggestions": [
+          "Завтра отдых или легкое кардио",
+          "Через 2 дня - тренировка спины"
+        ],
+        "progression_tips": [
+          "В следующий раз попробуй 87.5кг",
+          "Следи за техникой с таким весом"
+        ]
+      },
+      "confidence_score": 0.94,
+      "processing_time_ms": 1250,
+      "llm_model_used": "gpt-4-turbo",
+      "language": "ru"
+    },
+    "cardio_training": {
+      "message": "Хорошая кардио сессия! 🏃 30 минут бега - отлично для выносливости!",
+      "workout_data": {
+        "exercises": [
+          {
+            "name_original": "бег",
+            "name_normalized": "Running",
+            "duration_seconds": 1800,
+            "muscle_groups": ["legs", "cardio"],
+            "confidence": 0.98
+          }
+        ],
+        "workout_type": "cardio",
+        "estimated_duration": 30,
+        "intensity_level": 7
+      },
+      "calendar_update": {
+        "date": "2025-01-15", 
+        "emoji": "🏃",
+        "workout_summary": "Кардио: бег 30 мин",
+        "completion_percentage": 100,
+        "streak_info": {
+          "current_streak": 3,
+          "milestone_reached": false
+        }
+      },
+      "recommendations": {
+        "recovery_advice": "Не забудь размяться после бега",
+        "progression_tips": [
+          "Можешь увеличить время до 35 минут",
+          "Попробуй интервальные тренировки"
+        ]
+      },
+      "confidence_score": 0.92,
+      "processing_time_ms": 890,
+      "llm_model_used": "gpt-4-turbo", 
+      "language": "ru"
+    },
+    "error_response": {
+      "message": "Извините, не смог точно понять описание тренировки. Попробуйте описать упражнения более конкретно.",
+      "confidence_score": 0.15,
+      "processing_time_ms": 450,
+      "llm_model_used": "gpt-4-turbo",
+      "language": "ru"
+    }
+  },
+  "validation_rules": {
+    "required_fields": ["message", "confidence_score", "processing_time_ms", "llm_model_used", "language"],
+    "confidence_threshold": 0.3,
+    "max_processing_time_ms": 10000,
+    "supported_languages": ["ru", "en"],
+    "emoji_options": ["💪", "🏃", "🧘", "🏋️", "🤸", "⚽", "🏊", "🚴", "🥊", "🤾"]
+  },
+  "webhook_endpoints": {
+    "receive_from_n8n": "POST /api/webhook/n8n-response",
+    "send_to_n8n": "POST https://your-n8n.domain.com/webhook/sportchat"
+  }
+}
