@@ -33,10 +33,11 @@ async def send_message(
     
     # Отправляем в n8n webhook
     n8n_response = None
+    session_id = f"session_{user_id}_{datetime.now().strftime('%Y%m%d')}"
+    
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=5.0) as client:
             # Для GET запроса нужно отправить данные как строки
-            session_id = f"session_{user_id}_{datetime.now().strftime('%Y%m%d')}"
             webhook_payload = {
                 "user_id": str(user_id),
                 "message": message,
@@ -53,47 +54,25 @@ async def send_message(
             )
             
             if webhook_response.status_code == 200:
-                n8n_response = webhook_response.json()
-                print(f"✅ n8n response raw: {n8n_response}")
-                print(f"📊 n8n response type: {type(n8n_response)}")
-                
-                # Обрабатываем массив от n8n
-                if isinstance(n8n_response, list) and len(n8n_response) > 0:
-                    n8n_response = n8n_response[0]
-                    print(f"🔧 Extracted from array: {n8n_response}")
+                response_text = webhook_response.text.strip()
+                if response_text:
+                    n8n_response = webhook_response.json()
+                    print(f"✅ n8n response: {n8n_response}")
+                    
+                    # Обрабатываем массив от n8n
+                    if isinstance(n8n_response, list) and len(n8n_response) > 0:
+                        n8n_response = n8n_response[0]
+                        print(f"🔧 Extracted from array: {n8n_response}")
+                else:
+                    print("⚠️ n8n webhook returned empty response")
+                    n8n_response = None
             else:
                 print(f"❌ n8n webhook error: {webhook_response.status_code}")
-                print(f"❌ Response text: {webhook_response.text}")
+                n8n_response = None
                 
     except Exception as e:
-        print(f"❌ n8n webhook exception: {e}")
-        print(f"❌ Exception type: {type(e)}")
-        import traceback
-        print(f"❌ Full traceback: {traceback.format_exc()}")
-        
-        # ВРЕМЕННЫЙ MOCK для тестирования - если сообщение про подъем ног
-        if "подъем ног на пресс" in message.lower():
-            print("🧪 MOCK MODE: Используем тестовые данные")
-            n8n_response = [{
-                "output": {
-                    "message": "Отличный выбор! 💪 Подъем ног на пресс - прекрасное упражнение для развития нижней части пресса и укрепления кора.",
-                    "workout_logged": True,
-                    "parsed_exercises": [
-                        {
-                            "name": "подъем ног на пресс",
-                            "weight": 0,
-                            "sets": 3,
-                            "reps": 15
-                        }
-                    ],
-                    "suggestions": [
-                        "Техника: лёжа на спине, руки вдоль тела или под ягодицами для поддержки, поднимай прямые ноги до угла 90 градусов и медленно опускай",
-                        "Не используй инерцию - контролируй движение в обе фазы",
-                        "Дыши правильно: выдох при подъеме ног, вдох при опускании"
-                    ],
-                    "next_workout_recommendation": "Отличная нагрузка! На следующей тренировке попробуй увеличить до 4 подходов по 15 повторений или добавь удержание ног в верхней точке на 2-3 секунды для увеличения времени под нагрузкой."
-                }
-            }]
+        print(f"❌ n8n webhook failed: {e}")
+        n8n_response = None
     
     # Если есть ответ от n8n, используем его, иначе fallback к локальной обработке
     if n8n_response:
@@ -164,11 +143,22 @@ async def send_message(
             "session_id": session_id if 'session_id' in locals() else None
         }
     
+    # Безопасно сериализуем context
+    serialized_context = None
+    if ai_context:
+        try:
+            serialized_context = json.dumps(ai_context, ensure_ascii=False)
+        except Exception as e:
+            print(f"❌ Ошибка сериализации context: {e}")
+            print(f"❌ ai_context type: {type(ai_context)}")
+            print(f"❌ ai_context content: {ai_context}")
+            serialized_context = json.dumps({"error": "serialization_failed", "original_type": str(type(ai_context))})
+    
     ai_message = models.ChatMessage(
         user_id=user_id,
         message=response.message,
         is_user=False,
-        context=json.dumps(ai_context, ensure_ascii=False) if ai_context else None
+        context=serialized_context
     )
     db.add(ai_message)
     db.commit()
