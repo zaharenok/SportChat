@@ -132,7 +132,7 @@ async def send_message(
     
     # Сохраняем ответ AI с полным контекстом n8n для анализа
     import json
-    ai_context = None
+    serialized_context = None
     if n8n_response:
         # Сохраняем полные данные от n8n для будущих рекомендаций
         ai_context = {
@@ -142,17 +142,13 @@ async def send_message(
             "next_workout_recommendation": actual_data.get("next_workout_recommendation") if 'actual_data' in locals() else None,
             "session_id": session_id if 'session_id' in locals() else None
         }
-    
-    # Безопасно сериализуем context
-    serialized_context = None
-    if ai_context:
+        
+        # Безопасно сериализуем context
         try:
-            serialized_context = json.dumps(ai_context, ensure_ascii=False)
+            serialized_context = json.dumps(ai_context, ensure_ascii=False, default=str)
         except Exception as e:
             print(f"❌ Ошибка сериализации context: {e}")
-            print(f"❌ ai_context type: {type(ai_context)}")
-            print(f"❌ ai_context content: {ai_context}")
-            serialized_context = json.dumps({"error": "serialization_failed", "original_type": str(type(ai_context))})
+            serialized_context = json.dumps({"error": "serialization_failed", "message": str(e)}, ensure_ascii=False)
     
     ai_message = models.ChatMessage(
         user_id=user_id,
