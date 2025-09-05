@@ -5,15 +5,28 @@
   "installCommand": "cd frontend && npm install",
   "devCommand": "cd frontend && npm start",
   "framework": null,
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.9"
+    }
+  },
   "env": {
-    "REACT_APP_API_BASE_URL": "https://your-backend.up.railway.app"
+    "REACT_APP_API_BASE_URL": "https://sport-chat-git-main-zaharenokolegwork.vercel.app",
+    "DATABASE_URL": "@database_url",
+    "N8N_WEBHOOK_URL": "@n8n_webhook_url",
+    "SECRET_KEY": "@secret_key",
+    "JWT_SECRET": "@jwt_secret"
   },
   "build": {
     "env": {
-      "REACT_APP_API_BASE_URL": "https://your-backend.up.railway.app"
+      "REACT_APP_API_BASE_URL": "https://sport-chat-git-main-zaharenokolegwork.vercel.app"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
