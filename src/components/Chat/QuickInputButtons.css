@@ -1,0 +1,278 @@
+.quick-input-buttons {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  margin: 1rem 0;
+  border: 1px solid #e1e8ed;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quick-section {
+  margin-bottom: 1.5rem;
+}
+
+.quick-section:last-child {
+  margin-bottom: 0;
+}
+
+.quick-section h4 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.template-grid {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quick-btn {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  background: white;
+  color: #495057;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quick-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.exercise-btn {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border-color: #2980b9;
+}
+
+.exercise-btn:hover {
+  background: linear-gradient(135deg, #2980b9, #1f5f8b);
+  border-color: #1f5f8b;
+}
+
+.weight-btn {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-color: #c0392b;
+}
+
+.weight-btn:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  border-color: #922b21;
+}
+
+.set-btn {
+  background: linear-gradient(135deg, #f39c12, #d68910);
+  color: white;
+  border-color: #d68910;
+}
+
+.set-btn:hover {
+  background: linear-gradient(135deg, #d68910, #b7950b);
+  border-color: #b7950b;
+}
+
+.template-btn {
+  background: linear-gradient(135deg, #9b59b6, #7d3c98);
+  color: white;
+  border-color: #7d3c98;
+  justify-self: stretch;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.template-btn:hover {
+  background: linear-gradient(135deg, #7d3c98, #5b2c6f);
+  border-color: #5b2c6f;
+}
+
+.quick-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .quick-input-buttons {
+    margin: 0.6rem 0;
+    padding: 0.8rem;
+  }
+
+  .quick-section h4 {
+    font-size: 0.85rem;
+  }
+
+  .button-grid {
+    gap: 0.4rem;
+  }
+
+  .quick-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .template-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .quick-input-buttons {
+    margin: 0.5rem 0;
+    padding: 0.6rem;
+    border-radius: 8px;
+  }
+
+  .quick-section {
+    margin-bottom: 1rem;
+  }
+
+  .quick-section h4 {
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .button-grid {
+    gap: 0.3rem;
+  }
+
+  .quick-btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 16px;
+  }
+
+  .template-btn {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+    border-radius: 12px;
+  }
+
+  .template-grid {
+    gap: 0.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-input-buttons {
+    margin: 0.4rem 0;
+    padding: 0.5rem;
+  }
+
+  .quick-section {
+    margin-bottom: 0.8rem;
+  }
+
+  .quick-section h4 {
+    font-size: 0.75rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .button-grid {
+    gap: 0.25rem;
+  }
+
+  .quick-btn {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.7rem;
+    border-radius: 14px;
+  }
+
+  .template-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    border-radius: 10px;
+  }
+
+  .template-grid {
+    gap: 0.3rem;
+  }
+}
+
+/* Ensure buttons are easily tappable on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .quick-btn {
+    min-height: 36px;
+    min-width: 36px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .template-btn {
+    min-height: 44px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .quick-btn:active {
+    transform: scale(0.95);
+  }
+
+  .template-btn:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Compact mode for smaller screens */
+@media (max-width: 600px) {
+  .quick-input-buttons {
+    max-height: 50vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .quick-input-buttons::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .quick-input-buttons::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 2px;
+  }
+}
+
+/* Touch improvements for mobile */
+@media (hover: none) and (pointer: coarse) {
+  .quick-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .template-btn {
+    min-height: 48px;
+    padding: 0.8rem 1rem;
+  }
+}

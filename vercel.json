@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm ci && npm run build",
-  "outputDirectory": "frontend/build",
-  "installCommand": "cd frontend && npm install",
-  "devCommand": "cd frontend && npm start",
-  "framework": null,
+  "buildCommand": "npm ci && npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
+  "devCommand": "npm start",
+  "framework": "create-react-app",
   "functions": {
     "api/index.py": {
       "runtime": "python3.9"
