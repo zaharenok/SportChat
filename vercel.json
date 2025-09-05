@@ -6,11 +6,11 @@
   "devCommand": "cd frontend && npm start",
   "framework": null,
   "env": {
-    "REACT_APP_API_BASE_URL": "https://n8n.aaagency.at"
+    "REACT_APP_API_BASE_URL": "https://your-backend.up.railway.app"
   },
   "build": {
     "env": {
-      "REACT_APP_API_BASE_URL": "https://n8n.aaagency.at"
+      "REACT_APP_API_BASE_URL": "https://your-backend.up.railway.app"
     }
   },
   "rewrites": [
