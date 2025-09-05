@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import chat, workouts, exercises, goals
 from app.database.database import create_tables
+from app.config import settings
 
 app = FastAPI(
     title="SportChat API",
@@ -9,10 +10,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware для разработки
+# CORS middleware - поддержка как localhost так и продакшен домена
+allowed_origins = [
+    "http://localhost:3000",  # React dev server
+    settings.frontend_url,    # Продакшен URL из .env
+]
+
+# Добавляем Vercel домены если есть
+if settings.environment == "production":
+    allowed_origins.extend([
+        "https://*.vercel.app",
+        "https://sportchat.vercel.app",  # Замените на ваш домен
+    ])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React dev server
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
