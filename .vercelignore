@@ -1,0 +1,10 @@
+backend/
+*.md
+.git/
+node_modules/
+.env.local
+.env.development
+
+!frontend/
+!vercel.json
+!package.json
