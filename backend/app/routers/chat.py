@@ -7,6 +7,7 @@ from app.models import schemas, models
 from app.database.database import get_db
 from app.services.chat_service import ChatService
 from app.services.workout_service import WorkoutService
+from app.config import settings
 from datetime import datetime
 
 router = APIRouter()
@@ -47,7 +48,7 @@ async def send_message(
             print(f"🚀 Отправляем в n8n webhook: {webhook_payload}")
             
             webhook_response = await client.get(
-                "https://n8n.aaagency.at/webhook/ca45977e-cf5b-4b7b-a471-3a55da6bf356",
+                settings.n8n_webhook_url,
                 params=webhook_payload
             )
             
@@ -130,14 +131,21 @@ async def send_message(
             exercises_list = [f"{ex['name']} {ex['sets']}x{ex['reps']}" for ex in parsed_exercises]
             exercises_summary = f"✅ Записано: {', '.join(exercises_list)}"
         
+        # Определяем, есть ли контент для задержанного показа
+        has_suggestions = bool(actual_data.get("suggestions"))
+        has_recommendation = bool(actual_data.get("next_workout_recommendation"))
+        has_delayed = has_suggestions or has_recommendation
+        
         response = schemas.ChatResponse(
             message=str(actual_data.get("message", str(actual_data))),
             workout_logged=workout_logged or actual_data.get("workout_logged", False),
             suggestions=actual_data.get("suggestions", []),
             next_workout_recommendation=actual_data.get("next_workout_recommendation"),
-            show_delayed_suggestions=bool(actual_data.get("suggestions")),
-            show_delayed_recommendation=bool(actual_data.get("next_workout_recommendation")),
-            parsed_exercises_summary=exercises_summary
+            show_delayed_suggestions=has_suggestions,
+            show_delayed_recommendation=has_recommendation,
+            parsed_exercises_summary=exercises_summary,
+            has_delayed_content=has_delayed,
+            thinking_message="Анализирую тренировку и готовлю рекомендации..." if has_delayed else None
         )
     else:
         # Fallback к локальной обработке

@@ -108,6 +108,10 @@ class ChatResponse(BaseModel):
     show_delayed_suggestions: bool = False
     show_delayed_recommendation: bool = False
     parsed_exercises_summary: Optional[str] = None
+    
+    # Поля для двухэтапной системы ответов
+    has_delayed_content: bool = False
+    thinking_message: Optional[str] = None
 
 class EditMessageRequest(BaseModel):
     message: str

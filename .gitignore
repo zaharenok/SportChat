@@ -25,6 +25,7 @@ build/
 # Database
 *.sqlite
 *.db
+sportchat.db
 
 # Environment Files
 .env
@@ -32,6 +33,13 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Backend specific
+backend/.env
+backend/sportchat.db
+
+# Frontend specific  
+frontend/.env.local
 
 # IDE
 .vscode/
