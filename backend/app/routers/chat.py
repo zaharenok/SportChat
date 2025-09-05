@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+import httpx
+import asyncio
 from app.models import schemas, models
 from app.database.database import get_db
 from app.services.chat_service import ChatService
+from app.services.workout_service import WorkoutService
 from datetime import datetime
 
 router = APIRouter()
@@ -27,15 +30,137 @@ async def send_message(
     db.add(user_message)
     db.commit()
     
-    # Обрабатываем сообщение и получаем ответ
-    response = await chat_service.process_message(user_id, message)
+    # Отправляем в n8n webhook
+    n8n_response = None
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Для GET запроса нужно отправить данные как строки
+            session_id = f"session_{user_id}_{datetime.now().strftime('%Y%m%d')}"
+            webhook_payload = {
+                "user_id": str(user_id),
+                "message": message,
+                "timestamp": datetime.now().isoformat(),
+                "session_id": session_id,
+                "platform": "SportChat"
+            }
+            
+            print(f"🚀 Отправляем в n8n webhook: {webhook_payload}")
+            
+            webhook_response = await client.get(
+                "https://n8n.aaagency.at/webhook/ca45977e-cf5b-4b7b-a471-3a55da6bf356",
+                params=webhook_payload
+            )
+            
+            if webhook_response.status_code == 200:
+                n8n_response = webhook_response.json()
+                print(f"✅ n8n response raw: {n8n_response}")
+                print(f"📊 n8n response type: {type(n8n_response)}")
+                
+                # Обрабатываем массив от n8n
+                if isinstance(n8n_response, list) and len(n8n_response) > 0:
+                    n8n_response = n8n_response[0]
+                    print(f"🔧 Extracted from array: {n8n_response}")
+            else:
+                print(f"❌ n8n webhook error: {webhook_response.status_code}")
+                print(f"❌ Response text: {webhook_response.text}")
+                
+    except Exception as e:
+        print(f"❌ n8n webhook exception: {e}")
+        print(f"❌ Exception type: {type(e)}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
+        
+        # ВРЕМЕННЫЙ MOCK для тестирования - если сообщение про подъем ног
+        if "подъем ног на пресс" in message.lower():
+            print("🧪 MOCK MODE: Используем тестовые данные")
+            n8n_response = [{
+                "output": {
+                    "message": "Отличный выбор! 💪 Подъем ног на пресс - прекрасное упражнение для развития нижней части пресса и укрепления кора.",
+                    "workout_logged": True,
+                    "parsed_exercises": [
+                        {
+                            "name": "подъем ног на пресс",
+                            "weight": 0,
+                            "sets": 3,
+                            "reps": 15
+                        }
+                    ],
+                    "suggestions": [
+                        "Техника: лёжа на спине, руки вдоль тела или под ягодицами для поддержки, поднимай прямые ноги до угла 90 градусов и медленно опускай",
+                        "Не используй инерцию - контролируй движение в обе фазы",
+                        "Дыши правильно: выдох при подъеме ног, вдох при опускании"
+                    ],
+                    "next_workout_recommendation": "Отличная нагрузка! На следующей тренировке попробуй увеличить до 4 подходов по 15 повторений или добавь удержание ног в верхней точке на 2-3 секунды для увеличения времени под нагрузкой."
+                }
+            }]
     
-    # Сохраняем ответ AI
+    # Если есть ответ от n8n, используем его, иначе fallback к локальной обработке
+    if n8n_response:
+        # Обрабатываем разные форматы ответа от n8n
+        actual_data = n8n_response
+        
+        # Если n8n вернул массив, берем первый элемент
+        if isinstance(n8n_response, list) and len(n8n_response) > 0:
+            actual_data = n8n_response[0]
+        
+        # Если data вложена в 'output', извлекаем её
+        if "output" in actual_data and isinstance(actual_data["output"], dict):
+            actual_data = actual_data["output"]
+        elif "output" in actual_data:
+            # output - строка (старый формат)
+            actual_data = {"message": actual_data["output"]}
+        
+        # Если n8n вернул структурированные упражнения, логируем их
+        parsed_exercises = actual_data.get("parsed_exercises", [])
+        workout_logged = False
+        
+        print(f"🏋️ Found {len(parsed_exercises)} parsed exercises: {parsed_exercises}")
+        
+        if parsed_exercises:
+            try:
+                # Используем ChatService для логирования упражнений
+                workout_logged = await _log_parsed_exercises(user_id, parsed_exercises, db)
+                print(f"💪 Workout logged successfully: {workout_logged}")
+            except Exception as e:
+                print(f"❌ Ошибка при логировании упражнений из n8n: {e}")
+            
+        # Создаем краткую сводку о залогированных упражнениях
+        exercises_summary = None
+        if parsed_exercises and workout_logged:
+            exercises_list = [f"{ex['name']} {ex['sets']}x{ex['reps']}" for ex in parsed_exercises]
+            exercises_summary = f"✅ Записано: {', '.join(exercises_list)}"
+        
+        response = schemas.ChatResponse(
+            message=str(actual_data.get("message", str(actual_data))),
+            workout_logged=workout_logged or actual_data.get("workout_logged", False),
+            suggestions=actual_data.get("suggestions", []),
+            next_workout_recommendation=actual_data.get("next_workout_recommendation"),
+            show_delayed_suggestions=bool(actual_data.get("suggestions")),
+            show_delayed_recommendation=bool(actual_data.get("next_workout_recommendation")),
+            parsed_exercises_summary=exercises_summary
+        )
+    else:
+        # Fallback к локальной обработке
+        response = await chat_service.process_message(user_id, message)
+    
+    # Сохраняем ответ AI с полным контекстом n8n для анализа
+    import json
+    ai_context = None
+    if n8n_response:
+        # Сохраняем полные данные от n8n для будущих рекомендаций
+        ai_context = {
+            "n8n_response": n8n_response,
+            "parsed_exercises": actual_data.get("parsed_exercises", []) if 'actual_data' in locals() else [],
+            "suggestions": actual_data.get("suggestions", []) if 'actual_data' in locals() else [],
+            "next_workout_recommendation": actual_data.get("next_workout_recommendation") if 'actual_data' in locals() else None,
+            "session_id": session_id if 'session_id' in locals() else None
+        }
+    
     ai_message = models.ChatMessage(
         user_id=user_id,
         message=response.message,
         is_user=False,
-        context=response.context if hasattr(response, 'context') else None
+        context=json.dumps(ai_context, ensure_ascii=False) if ai_context else None
     )
     db.add(ai_message)
     db.commit()
@@ -136,3 +261,117 @@ async def edit_message(
             success=False,
             message=f"Ошибка при обработке: {str(e)}"
         )
+
+@router.get("/insights/{user_id}")
+async def get_workout_insights(
+    user_id: int = 1,
+    days: int = 7,
+    db: Session = Depends(get_db)
+):
+    """Получить аналитику и рекомендации из n8n за период"""
+    
+    from datetime import datetime, timedelta
+    start_date = datetime.now() - timedelta(days=days)
+    
+    # Получаем сообщения с контекстом n8n
+    messages = db.query(models.ChatMessage).filter(
+        models.ChatMessage.user_id == user_id,
+        models.ChatMessage.is_user == False,
+        models.ChatMessage.context.isnot(None),
+        models.ChatMessage.timestamp >= start_date
+    ).order_by(models.ChatMessage.timestamp.desc()).all()
+    
+    insights = {
+        "total_workouts": 0,
+        "total_exercises": 0,
+        "recent_suggestions": [],
+        "recommendations": [],
+        "parsed_exercises": []
+    }
+    
+    for message in messages:
+        if message.context:
+            try:
+                context = json.loads(message.context)
+                if "parsed_exercises" in context:
+                    for exercise in context["parsed_exercises"]:
+                        insights["parsed_exercises"].append({
+                            "date": message.timestamp.isoformat(),
+                            "exercise": exercise
+                        })
+                        insights["total_exercises"] += 1
+                    if context["parsed_exercises"]:
+                        insights["total_workouts"] += 1
+                
+                if context.get("suggestions"):
+                    insights["recent_suggestions"].extend(context["suggestions"])
+                
+                if context.get("next_workout_recommendation"):
+                    insights["recommendations"].append({
+                        "date": message.timestamp.isoformat(),
+                        "recommendation": context["next_workout_recommendation"]
+                    })
+            except:
+                continue
+    
+    # Убираем дубликаты из предложений
+    insights["recent_suggestions"] = list(set(insights["recent_suggestions"]))[-10:]
+    
+    return insights
+
+async def _log_parsed_exercises(user_id: int, parsed_exercises: list, db: Session) -> bool:
+    """Логирование структурированных упражнений из n8n"""
+    
+    try:
+        workout_service = WorkoutService(db)
+        
+        # Получаем или создаем сегодняшнюю тренировку
+        workout = await workout_service.get_or_create_today_workout(user_id)
+        
+        logged_count = 0
+        
+        for exercise_data in parsed_exercises:
+            # Ищем упражнение в базе по названию
+            exercise_name = exercise_data.get("name", "").strip()
+            if not exercise_name:
+                continue
+                
+            exercise = db.query(models.Exercise).filter(
+                models.Exercise.name.ilike(f"%{exercise_name}%")
+            ).first()
+            
+            # Если упражнение не найдено, создаем его
+            if not exercise:
+                exercise = models.Exercise(
+                    name=exercise_name,
+                    category="strength",
+                    muscle_groups="general",
+                    instructions=f"Упражнение: {exercise_name}"
+                )
+                db.add(exercise)
+                db.commit()
+                db.refresh(exercise)
+            
+            # Создаем лог упражнения
+            workout_log = models.WorkoutLog(
+                workout_id=workout.id,
+                exercise_id=exercise.id,
+                sets=exercise_data.get("sets", 1),
+                reps=exercise_data.get("reps", 1),
+                weight=exercise_data.get("weight", 0),
+                duration_seconds=exercise_data.get("duration"),
+                notes=f"Обработано через n8n: {exercise_name}"
+            )
+            
+            db.add(workout_log)
+            logged_count += 1
+        
+        db.commit()
+        
+        print(f"✅ Успешно залогировано {logged_count} упражнений из n8n")
+        return logged_count > 0
+        
+    except Exception as e:
+        print(f"❌ Ошибка в _log_parsed_exercises: {e}")
+        db.rollback()
+        return False

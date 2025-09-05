@@ -87,3 +87,20 @@ class ChatMessage(Base):
     # Метаданные для AI
     parsed_data = Column(Text)  # JSON с распарсенной информацией
     context = Column(Text)  # контекст для AI ответов
+
+class UserGoal(Base):
+    __tablename__ = "user_goals"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    type = Column(String(50), nullable=False)  # workouts, exercises, reps, weight_loss, muscle_gain
+    target_value = Column(Float, nullable=False)  # целевое значение
+    current_value = Column(Float, default=0.0)  # текущее значение
+    period = Column(String(20), default="month")  # week, month, year
+    created_at = Column(DateTime, default=datetime.utcnow)
+    deadline = Column(DateTime)  # дедлайн для достижения цели
+    is_active = Column(Boolean, default=True)
+    description = Column(String(200))  # описание цели
+    
+    # Связи
+    user = relationship("User", backref="user_goals")

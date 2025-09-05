@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import chat, workouts, exercises
+from app.routers import chat, workouts, exercises, goals
 from app.database.database import create_tables
 
 app = FastAPI(
@@ -30,6 +30,7 @@ async def startup_event():
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
 app.include_router(exercises.router, prefix="/api/exercises", tags=["exercises"])
+app.include_router(goals.router, prefix="/api/goals", tags=["goals"])
 
 @app.get("/")
 async def root():

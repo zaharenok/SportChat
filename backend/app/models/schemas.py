@@ -103,6 +103,11 @@ class ChatResponse(BaseModel):
     workout_logged: bool = False
     suggestions: Optional[List[str]] = None
     next_workout_recommendation: Optional[str] = None
+    
+    # Новые поля для богатого отображения
+    show_delayed_suggestions: bool = False
+    show_delayed_recommendation: bool = False
+    parsed_exercises_summary: Optional[str] = None
 
 class EditMessageRequest(BaseModel):
     message: str
@@ -117,3 +122,36 @@ class WorkoutSummary(BaseModel):
     workout: Workout
     exercises: List[dict]  # exercise name + stats
     total_volume: float  # общий тоннаж
+
+# Схемы для целей
+class UserGoalBase(BaseModel):
+    type: str  # workouts, exercises, reps, weight_loss, muscle_gain
+    target_value: float
+    period: str = "month"  # week, month, year
+    deadline: Optional[datetime] = None
+    description: Optional[str] = None
+
+class UserGoalCreate(UserGoalBase):
+    pass
+
+class UserGoalUpdate(BaseModel):
+    target_value: Optional[float] = None
+    current_value: Optional[float] = None
+    deadline: Optional[datetime] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class UserGoal(UserGoalBase):
+    id: int
+    user_id: int
+    current_value: float
+    created_at: datetime
+    is_active: bool
+    
+    class Config:
+        from_attributes = True
+
+class GoalProgress(BaseModel):
+    goal: UserGoal
+    progress_percentage: float
+    status: str  # "not_started", "in_progress", "completed", "overdue"

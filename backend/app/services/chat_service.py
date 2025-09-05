@@ -31,6 +31,8 @@ class ChatService:
             return await self._handle_question(user_id, message, parsed_data)
         elif parsed_data.get("type") == "greeting":
             return await self._handle_greeting(user_id, message)
+        elif parsed_data.get("type") == "negative":
+            return await self._handle_negative_message(user_id, message)
         else:
             return await self._handle_general_message(user_id, message)
 
@@ -160,6 +162,30 @@ class ChatService:
             greeting = f"Привет, {username}! Готовы начать отслеживать тренировки? Расскажите, что делали сегодня!"
         
         return schemas.ChatResponse(message=greeting)
+
+    async def _handle_negative_message(self, user_id: int, message: str) -> schemas.ChatResponse:
+        """Обработать негативное сообщение (не идти в зал)"""
+        
+        # Получаем мотивирующие сообщения в зависимости от причины
+        message_lower = message.lower()
+        
+        if any(word in message_lower for word in ['болею', 'болен']):
+            response = "Понимаю, здоровье важнее. Отдыхайте и выздоравливайте! Можете попробовать легкую растяжку дома, если позволяет самочувствие."
+        elif any(word in message_lower for word in ['устал', 'усталость']):
+            response = "Отдых тоже часть тренировочного процесса. Может быть, легкая прогулка или растяжка? Иногда легкая активность помогает восстановиться."
+        elif any(word in message_lower for word in ['нет времени', 'занят']):
+            response = "Бывает! Попробуйте короткую 10-15 минутную тренировку дома - отжимания, приседания, планка. Это лучше, чем ничего."
+        elif any(word in message_lower for word in ['лень']):
+            response = "Понимаю чувство! Помните: даже 5 минут активности - это победа. Может быть, просто прогуляетесь?"
+        else:
+            response = "Понимаю, бывают такие дни. Главное - не бросать совсем! Завтра новый день для тренировок."
+        
+        # НЕ логируем это в историю тренировок
+        return schemas.ChatResponse(
+            message=response,
+            workout_logged=False,  # Явно указываем, что тренировка не записана
+            suggestions=["Попробуйте завтра", "Легкая активность дома", "10-минутная тренировка"]
+        )
 
     async def _handle_general_message(self, user_id: int, message: str) -> schemas.ChatResponse:
         """Обработать общее сообщение"""

@@ -46,11 +46,36 @@ class MessageParser:
             r'как.+делать',
             r'правильно.+выполн'
         ]
+        
+        # Паттерны для негативных сообщений (не идти в зал, пропуск тренировки)
+        self.negative_patterns = [
+            r'не\s+пойду\s+в\s+зал',
+            r'не\s+иду\s+в\s+зал', 
+            r'сегодня\s+не\s+пойду',
+            r'сегодня\s+не\s+иду',
+            r'пропущу\s+тренировку',
+            r'пропускаю\s+тренировку',
+            r'отдых\s+сегодня',
+            r'сегодня\s+отдых',
+            r'не\s+тренируюсь',
+            r'не\s+тренировался',
+            r'отменяю\s+тренировку',
+            r'отменил\s+тренировку',
+            r'болею',
+            r'устал',
+            r'нет\s+времени',
+            r'занят',
+            r'лень'
+        ]
 
     async def parse_message(self, message: str) -> Dict:
         """Парсить сообщение и определить его тип и содержание"""
         
         message_lower = message.lower().strip()
+        
+        # Проверяем на негативные сообщения (не идти в зал)
+        if self._is_negative_message(message_lower):
+            return {"type": "negative"}
         
         # Проверяем на приветствие
         if self._is_greeting(message_lower):
@@ -73,6 +98,10 @@ class MessageParser:
             }
         
         return {"type": "general"}
+
+    def _is_negative_message(self, message: str) -> bool:
+        """Определить, является ли сообщение негативным (не идти в зал)"""
+        return any(re.search(pattern, message, re.IGNORECASE) for pattern in self.negative_patterns)
 
     def _is_greeting(self, message: str) -> bool:
         """Определить, является ли сообщение приветствием"""
