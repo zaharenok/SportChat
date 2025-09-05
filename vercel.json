@@ -6,11 +6,11 @@
   "devCommand": "cd frontend && npm start",
   "framework": null,
   "env": {
-    "REACT_APP_API_BASE_URL": "@react_app_api_base_url"
+    "REACT_APP_API_BASE_URL": "https://n8n.aaagency.at"
   },
   "build": {
     "env": {
-      "REACT_APP_API_BASE_URL": "@react_app_api_base_url"
+      "REACT_APP_API_BASE_URL": "https://n8n.aaagency.at"
     }
   },
   "rewrites": [
