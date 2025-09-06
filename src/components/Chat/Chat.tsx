@@ -17,7 +17,7 @@ const Chat: React.FC<ChatProps> = ({ userId = 1 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showQuickButtons, setShowQuickButtons] = useState(true);
+  const [showQuickButtons, setShowQuickButtons] = useState(false);
   const [currentSuggestions, setCurrentSuggestions] = useState<string[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingMessage, setThinkingMessage] = useState('');
@@ -351,7 +351,7 @@ const Chat: React.FC<ChatProps> = ({ userId = 1 }) => {
       <div className="space-y-4">
         <QuickInputButtons 
           onQuickInput={handleQuickInput}
-          isVisible={showQuickButtons && messages.length >= 0}
+          isVisible={showQuickButtons}
         />
         <SuggestionButtons 
           suggestions={currentSuggestions}

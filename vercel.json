@@ -5,29 +5,32 @@
   "installCommand": "npm install",
   "devCommand": "npm start",
   "framework": "create-react-app",
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.9"
-    }
-  },
   "env": {
-    "REACT_APP_API_BASE_URL": "https://sport-chat-git-main-zaharenokolegwork.vercel.app",
-    "REACT_APP_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "DATABASE_URL": "@database_url",
-    "N8N_WEBHOOK_URL": "@n8n_webhook_url",
-    "SECRET_KEY": "@secret_key",
-    "JWT_SECRET": "@jwt_secret"
+    "REACT_APP_SUPABASE": "@supabase_key",
+    "REACT_APP_N8N_WEBHOOK": "@n8n_webhook_url"
   },
   "build": {
     "env": {
-      "REACT_APP_API_BASE_URL": "https://sport-chat-git-main-zaharenokolegwork.vercel.app",
-      "REACT_APP_SUPABASE_ANON_KEY": "@supabase_anon_key"
+      "REACT_APP_SUPABASE": "@supabase_key",
+      "REACT_APP_N8N_WEBHOOK": "@n8n_webhook_url"
     }
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "source": "/api/chat/(.*)",
+      "destination": "/api/chat.js"
+    },
+    {
+      "source": "/api/exercises/(.*)",
+      "destination": "/api/exercises.js"
+    },
+    {
+      "source": "/api/workouts/(.*)",
+      "destination": "/api/workouts.js"
+    },
+    {
+      "source": "/api/goals/(.*)",
+      "destination": "/api/goals.js"
     },
     {
       "source": "/(.*)",
