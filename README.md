@@ -1,203 +1,245 @@
-# SportChat - Твой спортивный помощник 💪
+# SportChat - Your AI Fitness Companion 💪
 
-SportChat - это современное веб-приложение для отслеживания тренировок и получения персональных советов от AI-помощника. Приложение помогает пользователям вести дневник тренировок, ставить цели, отслеживать прогресс и получать мотивацию через интерактивный чат.
+SportChat is a modern web application for workout tracking and personalized AI coaching. The app helps users maintain workout diaries, set goals, track progress, and receive motivation through an interactive AI chat assistant.
 
-## 🚀 Основные возможности
+## 🚀 Key Features
 
-### 📱 Интерактивный чат
-- **AI-помощник**: Умный бот, который анализирует ваши тренировки и дает персональные рекомендации
-- **История по дням**: Каждый день имеет свою отдельную историю чата
-- **Анализ тренировок**: Автоматическое распознавание упражнений и логирование активности
-- **Персональные советы**: Рекомендации по питанию, восстановлению и планированию тренировок
+### 📱 Interactive AI Chat
+- **AI Assistant**: Smart bot that analyzes your workouts and provides personalized recommendations
+- **Daily History**: Each day has its own separate chat history
+- **Workout Analysis**: Automatic exercise recognition and activity logging
+- **Personal Advice**: Recommendations for nutrition, recovery, and workout planning
 
-### 📊 Дашборд и аналитика
-- **Статистика тренировок**: Количество тренировок, среднее время, калории
-- **Графики активности**: Недельная и месячная статистика с интерактивными диаграммами
-- **Отслеживание целей**: Визуальный прогресс достижения поставленных целей
-- **История тренировок**: Детальный журнал всех выполненных тренировок
+### 📊 Dashboard & Analytics
+- **Workout Statistics**: Number of workouts, average time, calories burned
+- **Activity Charts**: Weekly and monthly statistics with interactive diagrams
+- **Goal Tracking**: Visual progress tracking for set goals
+- **Workout History**: Detailed journal of all completed workouts
 
-### 🎯 Система целей и достижений
-- **Персональные цели**: Установка и отслеживание индивидуальных целей
-- **Система достижений**: Награды за выполнение различных челленджей
-- **Прогресс-бары**: Визуальное отображение прогресса по каждой цели
+### 🎯 Goals & Achievements System
+- **Personal Goals**: Set and track individual fitness goals
+- **Achievement System**: Rewards for completing various challenges
+- **Progress Bars**: Visual representation of progress for each goal
 
-### 📅 Управление днями
-- **Календарь тренировок**: Создание и управление тренировочными днями
-- **Быстрое переключение**: Легкий переход между разными днями
-- **Автоматическое создание**: Система автоматически создает сегодняшний день
+### 📅 Day Management
+- **Workout Calendar**: Create and manage training days
+- **Quick Switching**: Easy navigation between different days
+- **Auto Creation**: System automatically creates today's entry
 
-## 🛠 Технологический стек
+## 🛠 Technology Stack
 
 ### Frontend
-- **Next.js 15** - React фреймворк с App Router
-- **TypeScript** - Типизированный JavaScript
-- **Tailwind CSS** - Utility-first CSS фреймворк
-- **Framer Motion** - Анимации и переходы
-- **Recharts** - Библиотека для создания графиков
-- **Lucide React** - Иконки
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Utility-first CSS framework
+- **Framer Motion** - Animations and transitions
+- **Recharts** - Chart library for analytics
+- **Lucide React** - Icon library
 
 ### Backend & Database
-- **Next.js API Routes** - Серверная логика
-- **JSON Database** - Файловая система для хранения данных
-- **Supabase** (опционально) - PostgreSQL база данных
-- **Authentication** - Система аутентификации с JWT токенами
+- **Next.js API Routes** - Server-side logic
+- **JSON Database** - File-based data storage (default)
+- **Supabase** (optional) - PostgreSQL database
+- **Authentication** - JWT token-based authentication system
 
-### Интеграции
-- **N8N Webhook** - Интеграция с AI-сервисом для обработки сообщений
-- **External AI API** - Обработка естественного языка и генерация ответов
+### Integrations
+- **N8N Webhook** - AI service integration for message processing
+- **External AI API** - Natural language processing and response generation
 
-## 📦 Установка и запуск
+## 📦 Installation & Setup
 
-### Предварительные требования
+### Prerequisites
 - Node.js 18+ 
-- npm, yarn, pnpm или bun
+- npm, yarn, pnpm, or bun
 
-### Быстрый старт
+### Quick Start
 
-1. **Клонирование репозитория**
+1. **Clone the repository**
 ```bash
-git clone <repository-url>
-cd sportchat
+git clone https://github.com/zaharenok/SportChat.git
+cd SportChat
 ```
 
-2. **Установка зависимостей**
+2. **Install dependencies**
 ```bash
 npm install
-# или
+# or
 yarn install
-# или
+# or
 pnpm install
 ```
 
-3. **Настройка переменных окружения**
-```bash
-cp .env.example .env
-```
-
-Отредактируйте `.env` файл:
+3. **Environment Configuration**
+Create a `.env` file in the root directory:
 ```env
-# Supabase Configuration (опционально)
+# Project Configuration
+NEXT_PUBLIC_PROJECT_ID=your-project-id
+NEXT_PUBLIC_PROJECT_NAME=SportChat
+
+# JWT Secret for Authentication (generate a secure random string)
+JWT_SECRET=your-jwt-secret-key
+
+# Supabase Configuration (optional - for database mode)
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-# JWT Secret для аутентификации
-JWT_SECRET=your-jwt-secret-key
+# AI Integration (if using external AI service)
+AI_WEBHOOK_URL=your-ai-webhook-endpoint
+AI_API_KEY=your-ai-api-key
 ```
 
-4. **Запуск в режиме разработки**
+4. **Run in development mode**
 ```bash
 npm run dev
 ```
 
-5. **Открытие приложения**
-Перейдите по адресу [http://localhost:3000](http://localhost:3000)
+5. **Open the application**
+Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 🗄 Структура базы данных
+## 🗄 Database Structure
 
-Приложение поддерживает два режима работы с данными:
+The application supports two data storage modes:
 
-### JSON Database (по умолчанию)
-Файлы находятся в `data/db/`:
-- `users.json` - Пользователи
-- `days.json` - Тренировочные дни
-- `chat_messages.json` - История чата
-- `workouts.json` - Тренировки
-- `goals.json` - Цели пользователей
-- `achievements.json` - Достижения
+### JSON Database (Default)
+Files located in `data/db/`:
+- `users.json` - User accounts
+- `days.json` - Training days
+- `chat_messages.json` - Chat history
+- `workouts.json` - Workout records
+- `goals.json` - User goals
+- `achievements.json` - User achievements
 
-### Supabase (опционально)
-Для настройки Supabase следуйте инструкциям в [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+### Supabase (Optional)
+For Supabase setup, follow the instructions in [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
 
 ## 🔧 API Endpoints
 
-### Аутентификация
-- `POST /api/auth/login` - Вход в систему
-- `GET /api/auth/me` - Получение текущего пользователя
-- `POST /api/auth/logout` - Выход из системы
-- `PUT /api/auth/update-profile` - Обновление профиля
+### Authentication
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+- `POST /api/auth/logout` - User logout
+- `PUT /api/auth/update-profile` - Update user profile
 
-### Пользователи
-- `GET /api/users` - Получение всех пользователей
-- `POST /api/users` - Создание нового пользователя
+### Users
+- `GET /api/users` - Get all users
+- `POST /api/users` - Create new user
 
-### Дни тренировок
-- `GET /api/days?userId={id}` - Получение дней пользователя
-- `POST /api/days` - Создание нового дня
-- `DELETE /api/days?dayId={id}` - Удаление дня
+### Training Days
+- `GET /api/days?userId={id}` - Get user's days
+- `POST /api/days` - Create new day
+- `DELETE /api/days?dayId={id}` - Delete day
 
-### Чат
-- `GET /api/chat?dayId={id}` - Получение сообщений дня
-- `POST /api/chat` - Отправка сообщения
+### Chat
+- `GET /api/chat?dayId={id}` - Get day's messages
+- `POST /api/chat` - Send message
 
-### Цели и достижения
-- `GET /api/goals?userId={id}` - Получение целей пользователя
-- `GET /api/achievements?userId={id}` - Получение достижений пользователя
+### Goals & Achievements
+- `GET /api/goals?userId={id}` - Get user goals
+- `GET /api/achievements?userId={id}` - Get user achievements
 
-## 🎨 Компоненты
+## 🎨 Components
 
-### Основные компоненты
-- **Chat** - Интерактивный чат с AI-помощником
-- **Dashboard** - Дашборд с аналитикой и статистикой
-- **DayManager** - Управление тренировочными днями
-- **UserProfile** - Профиль пользователя
-- **Navigation** - Навигация между разделами
+### Core Components
+- **Chat** - Interactive AI chat assistant
+- **Dashboard** - Analytics and statistics dashboard
+- **DayManager** - Training day management
+- **UserProfile** - User profile management
+- **Navigation** - Section navigation
 
-### Утилиты
-- **client-api.ts** - API для работы с данными на клиенте
-- **json-db.ts** - Работа с JSON базой данных
-- **auth.ts** - Утилиты для аутентификации
+### Utilities
+- **client-api.ts** - Client-side API utilities
+- **json-db.ts** - JSON database operations
+- **auth.ts** - Authentication utilities
 
-## 🚀 Деплой
+## 🚀 Deployment
 
-### Vercel (рекомендуется)
-1. Подключите репозиторий к Vercel
-2. Настройте переменные окружения
-3. Деплой произойдет автоматически
+### Vercel (Recommended)
+1. Connect your repository to Vercel
+2. Configure environment variables in Vercel dashboard
+3. Deploy automatically on push
 
-### Другие платформы
-Приложение совместимо с любыми платформами, поддерживающими Next.js:
+### Other Platforms
+The application is compatible with any platform supporting Next.js:
 - Netlify
 - Railway
 - Heroku
 - DigitalOcean App Platform
 
-## 🔒 Безопасность
+## 🔒 Security
 
-- JWT токены для аутентификации
-- HTTP-only cookies для хранения сессий
-- Валидация данных на сервере
-- CORS настройки
-- Rate limiting (рекомендуется добавить)
+- JWT tokens for authentication
+- HTTP-only cookies for session storage
+- Server-side data validation
+- CORS configuration
+- Environment variables for sensitive data
+- Rate limiting (recommended to implement)
 
-## 🤝 Вклад в проект
+### Security Best Practices
+- Never commit sensitive keys to version control
+- Use strong, randomly generated JWT secrets
+- Regularly rotate API keys
+- Implement proper input validation
+- Use HTTPS in production
 
-1. Форкните репозиторий
-2. Создайте ветку для новой функции (`git checkout -b feature/amazing-feature`)
-3. Зафиксируйте изменения (`git commit -m 'Add amazing feature'`)
-4. Отправьте в ветку (`git push origin feature/amazing-feature`)
-5. Откройте Pull Request
+## 🤝 Contributing
 
-## 📝 Лицензия
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Этот проект распространяется под лицензией MIT. См. файл `LICENSE` для подробностей.
+### Development Guidelines
+- Follow TypeScript best practices
+- Write meaningful commit messages
+- Add tests for new features
+- Update documentation as needed
+- Ensure code passes linting
 
-## 🆘 Поддержка
+## 📝 License
 
-Если у вас возникли вопросы или проблемы:
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
-1. Проверьте [Issues](../../issues) на GitHub
-2. Создайте новый Issue с подробным описанием проблемы
-3. Убедитесь, что все зависимости установлены корректно
-4. Проверьте настройки переменных окружения
+## 🆘 Support
 
-## 🔄 Обновления
+If you encounter issues or have questions:
 
-Следите за обновлениями проекта:
-- Новые функции AI-помощника
-- Улучшения интерфейса
-- Дополнительные интеграции
-- Мобильная версия (в планах)
+1. Check existing [Issues](../../issues) on GitHub
+2. Create a new Issue with detailed problem description
+3. Ensure all dependencies are installed correctly
+4. Verify environment variable configuration
+
+## 🔄 Roadmap
+
+Upcoming features and improvements:
+- Enhanced AI workout recommendations
+- Mobile app version
+- Social features and community
+- Advanced analytics and insights
+- Integration with fitness wearables
+- Multi-language support
+
+## 📊 Project Structure
+
+```
+SportChat/
+├── src/
+│   ├── app/                 # Next.js App Router
+│   │   ├── api/            # API routes
+│   │   ├── globals.css     # Global styles
+│   │   ├── layout.tsx      # Root layout
+│   │   └── page.tsx        # Home page
+│   ├── components/         # React components
+│   └── lib/               # Utilities and helpers
+├── data/db/               # JSON database files
+├── public/                # Static assets
+├── .env                   # Environment variables
+├── package.json           # Dependencies
+└── README.md             # This file
+```
 
 ---
 
-**Создано с ❤️ для спортивного сообщества**
+**Built with ❤️ for the fitness community**
+
+For more information, visit the [GitHub repository](https://github.com/zaharenok/SportChat.git)
