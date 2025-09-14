@@ -1,273 +1,216 @@
-# SportChat - Your AI Fitness Companion 💪
+# 🏋️ SportChat - Твой спортивный помощник
 
-SportChat is a modern web application for workout tracking and personalized AI coaching. The app helps users maintain workout diaries, set goals, track progress, and receive motivation through an interactive AI chat assistant.
+Умное приложение для отслеживания тренировок и получения персональных советов с интеграцией ИИ.
 
-## 🚀 Key Features
+*Smart fitness tracking application with AI integration for personalized workout advice.*
 
-### 📱 Interactive AI Chat
+## 🚀 Возможности
 
-- **AI Assistant**: Smart bot that analyzes your workouts and provides personalized recommendations
-- **Daily History**: Each day has its own separate chat history
-- **Workout Analysis**: Automatic exercise recognition and activity logging
-- **Personal Advice**: Recommendations for nutrition, recovery, and workout planning
+- **📅 Управление тренировочными днями** - создание и отслеживание дней тренировок
+- **💬 ИИ чат-помощник** - персональные советы и мотивация 
+- **📊 Дашборд с аналитикой** - визуализация прогресса и статистики
+- **🎯 Цели и достижения** - постановка целей и отслеживание результатов
+- **👤 Профиль пользователя** - управление личными данными
+- **🔐 Безопасная аутентификация** - система входа на основе cookies
 
-### 📊 Dashboard & Analytics
+## 🛠️ Технологии
 
-- **Workout Statistics**: Number of workouts, average time, calories burned
-- **Activity Charts**: Weekly and monthly statistics with interactive diagrams
-- **Goal Tracking**: Visual progress tracking for set goals
-- **Workout History**: Detailed journal of all completed workouts
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Animations**: Framer Motion
+- **Database**: Redis (Upstash)
+- **Authentication**: Custom cookie-based system
+- **Deployment**: Vercel
+- **AI Integration**: N8N webhooks
+- **Charts**: Recharts
+- **Icons**: Lucide React
 
-### 🎯 Goals & Achievements System
+## 📋 Требования
 
-- **Personal Goals**: Set and track individual fitness goals
-- **Achievement System**: Rewards for completing various challenges
-- **Progress Bars**: Visual representation of progress for each goal
+- Node.js 18+ 
+- npm или yarn
+- Redis database (Upstash рекомендуется)
+- N8N для ИИ интеграции (опционально)
 
-### 📅 Day Management
+## ⚡ Быстрый старт
 
-- **Workout Calendar**: Create and manage training days
-- **Quick Switching**: Easy navigation between different days
-- **Auto Creation**: System automatically creates today's entry
-
-## 🛠 Technology Stack
-
-### Frontend
-
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS** - Utility-first CSS framework
-- **Framer Motion** - Animations and transitions
-- **Recharts** - Chart library for analytics
-- **Lucide React** - Icon library
-
-### Backend & Database
-
-- **Next.js API Routes** - Server-side logic
-- **JSON Database** - File-based data storage (default)
-- **Supabase** (optional) - PostgreSQL database
-- **Authentication** - JWT token-based authentication system
-
-### Integrations
-
-- **N8N Webhook** - AI service integration for message processing
-- **External AI API** - Natural language processing and response generation
-
-## 📦 Installation & Setup
-
-### Prerequisites
-
-- Node.js 18+
-- npm, yarn, pnpm, or bun
-
-### Quick Start
-
-1. **Clone the repository**
+### 1. Клонирование и установка
 
 ```bash
-git clone https://github.com/zaharenok/SportChat.git
-cd SportChat
-```
-
-2. **Install dependencies**
-
-```bash
+git clone <your-repo-url>
+cd sportchat
 npm install
-# or
-yarn install
-# or
-pnpm install
 ```
 
-3. **Environment Configuration**
-   Create a `.env` file in the root directory:
+### 2. Настройка переменных окружения
+
+```bash
+cp .env.example .env
+```
+
+Заполните `.env` файл:
 
 ```env
-# Project Configuration
-NEXT_PUBLIC_PROJECT_ID=your-project-id
-NEXT_PUBLIC_PROJECT_NAME=SportChat
+# Обязательные переменные
+KV_REST_API_URL=https://your-redis.upstash.io
+KV_REST_API_TOKEN=your-redis-token
+WEBHOOK_URL=https://your-n8n.com/webhook/your-id
 
-# JWT Secret for Authentication (generate a secure random string)
-JWT_SECRET=your-jwt-secret-key
-
-# Supabase Configuration (optional - for database mode)
+# Опциональные
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-
-# AI Integration (if using external AI service)
-WEBHOOK_URL=your-ai-webhook-endpoint
-AI_API_KEY=your-ai-api-key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-key
 ```
 
-4. **Run in development mode**
+### 3. Запуск разработки
 
 ```bash
 npm run dev
 ```
 
-5. **Open the application**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+Откройте [http://localhost:3000](http://localhost:3000) в браузере.
 
-## 🗄 Database Structure
+## 🗄️ База данных
 
-The application supports two data storage modes:
+Приложение использует **Redis** через Upstash для:
 
-### JSON Database (Default)
+- Пользователи и аутентификация
+- Тренировочные дни и данные
+- Сообщения чата
+- Цели и достижения
+- Сессии пользователей (TTL 7 дней)
 
-Files located in `data/db/`:
+### Настройка Redis (Upstash)
 
-- `users.json` - User accounts
-- `days.json` - Training days
-- `chat_messages.json` - Chat history
-- `workouts.json` - Workout records
-- `goals.json` - User goals
-- `achievements.json` - User achievements
+1. Создайте базу на [upstash.com](https://upstash.com)
+2. Скопируйте **REST API URL** и **Token**
+3. Добавьте в переменные окружения
 
-### Supabase (Optional)
+## 🔧 Скрипты
 
-For Supabase setup, follow the instructions in [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+```bash
+npm run dev          # Запуск dev сервера
+npm run build        # Сборка для продакшена  
+npm start            # Запуск production сервера
+npm run lint         # Проверка кода ESLint
+npm run type-check   # Проверка TypeScript типов
+```
 
-## 🔧 API Endpoints
-
-### Authentication
-
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/logout` - User logout
-- `PUT /api/auth/update-profile` - Update user profile
-
-### Users
-
-- `GET /api/users` - Get all users
-- `POST /api/users` - Create new user
-
-### Training Days
-
-- `GET /api/days?userId={id}` - Get user's days
-- `POST /api/days` - Create new day
-- `DELETE /api/days?dayId={id}` - Delete day
-
-### Chat
-
-- `GET /api/chat?dayId={id}` - Get day's messages
-- `POST /api/chat` - Send message
-
-### Goals & Achievements
-
-- `GET /api/goals?userId={id}` - Get user goals
-- `GET /api/achievements?userId={id}` - Get user achievements
-
-## 🎨 Components
-
-### Core Components
-
-- **Chat** - Interactive AI chat assistant
-- **Dashboard** - Analytics and statistics dashboard
-- **DayManager** - Training day management
-- **UserProfile** - User profile management
-- **Navigation** - Section navigation
-
-### Utilities
-
-- **client-api.ts** - Client-side API utilities
-- **json-db.ts** - JSON database operations
-- **auth.ts** - Authentication utilities
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. Connect your repository to Vercel
-2. Configure environment variables in Vercel dashboard
-3. Deploy automatically on push
-
-### Other Platforms
-
-The application is compatible with any platform supporting Next.js:
-
-- Netlify
-- Railway
-- Heroku
-- DigitalOcean App Platform
-
-## 🔒 Security
-
-- JWT tokens for authentication
-- HTTP-only cookies for session storage
-- Server-side data validation
-- CORS configuration
-- Environment variables for sensitive data
-- Rate limiting (recommended to implement)
-
-### Security Best Practices
-
-- Never commit sensitive keys to version control
-- Use strong, randomly generated JWT secrets
-- Regularly rotate API keys
-- Implement proper input validation
-- Use HTTPS in production
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript best practices
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
-- Ensure code passes linting
-
-## 📝 License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
-## 🆘 Support
-
-If you encounter issues or have questions:
-
-1. Check existing [Issues](../../issues) on GitHub
-2. Create a new Issue with detailed problem description
-3. Ensure all dependencies are installed correctly
-4. Verify environment variable configuration
-
-## 🔄 Roadmap
-
-Upcoming features and improvements:
-
-- Enhanced AI workout recommendations
-- Mobile app version
-- Social features and community
-- Advanced analytics and insights
-- Integration with fitness wearables
-- Multi-language support
-
-## 📊 Project Structure
+## 📁 Структура проекта
 
 ```
-SportChat/
+sportchat/
 ├── src/
 │   ├── app/                 # Next.js App Router
 │   │   ├── api/            # API routes
-│   │   ├── globals.css     # Global styles
+│   │   ├── register/       # Страница регистрации
 │   │   ├── layout.tsx      # Root layout
-│   │   └── page.tsx        # Home page
-│   ├── components/         # React components
-│   └── lib/               # Utilities and helpers
-├── data/db/               # JSON database files
-├── public/                # Static assets
-├── .env                   # Environment variables
-├── package.json           # Dependencies
-└── README.md             # This file
+│   │   └── page.tsx        # Главная страница
+│   ├── components/         # React компоненты
+│   │   ├── Chat.tsx       # ИИ чат
+│   │   ├── Dashboard.tsx  # Аналитика
+│   │   ├── DayManager.tsx # Управление днями
+│   │   └── ...
+│   └── lib/               # Утилиты и API
+│       ├── redis-db.ts   # Redis адаптер
+│       ├── auth.ts       # Аутентификация
+│       └── client-api.ts # Client-side API
+├── public/                # Статические файлы
+├── .env.example          # Шаблон переменных
+├── SECURITY.md          # Инструкции по безопасности
+└── README.md           # Этот файл
 ```
+
+## 🚀 Деплой на Vercel
+
+### 1. Подготовка
+
+```bash
+npm run build  # Проверка сборки
+```
+
+### 2. Настройка Vercel
+
+1. Подключите репозиторий к Vercel
+2. В **Project Settings → Environment Variables** добавьте все переменные из `.env`
+3. Отметьте чувствительные переменные как **Sensitive**
+
+### 3. Переменные окружения в Vercel
+
+```env
+KV_REST_API_URL          (Sensitive) ✅
+KV_REST_API_TOKEN        (Sensitive) ✅  
+WEBHOOK_URL              (Sensitive) ✅
+NEXT_PUBLIC_WEBHOOK_URL  (Public)
+```
+
+### 4. Deploy
+
+Vercel автоматически деплоит при push в main ветку.
+
+## 🔐 Безопасность
+
+- ✅ Все чувствительные данные в переменных окружения
+- ✅ `.env` исключен из git
+- ✅ Cookie-based аутентификация с httpOnly
+- ✅ Redis сессии с автоматическим TTL
+- ✅ Валидация всех пользовательских данных
+
+См. [SECURITY.md](./SECURITY.md) для деталей.
+
+## 🤖 ИИ Интеграция
+
+### N8N Webhook
+
+1. Настройте N8N workflow с HTTP webhook
+2. Добавьте обработку запросов от SportChat
+3. Интегрируйте с вашим ИИ сервисом (OpenAI, Claude, etc.)
+4. URL webhook добавьте в `WEBHOOK_URL`
+
+### Пример N8N workflow
+
+```json
+{
+  "trigger": "webhook",
+  "method": "POST", 
+  "data": {
+    "message": "user message",
+    "context": "training context"
+  }
+}
+```
+
+## 🤝 Разработка
+
+### Добавление новых функций
+
+1. Создайте feature branch
+2. Добавьте компоненты в `src/components/`
+3. API routes в `src/app/api/`
+4. Обновите типы в `src/lib/`
+5. Создайте PR с описанием
+
+### Code Style
+
+- TypeScript strict mode
+- ESLint + Prettier
+- Компоненты с TypeScript interfaces
+- Async/await для асинхронных операций
+
+## 📞 Поддержка
+
+Если возникли вопросы:
+
+1. Проверьте [SECURITY.md](./SECURITY.md) для проблем с деплоем
+2. Посмотрите логи в Vercel Functions
+3. Проверьте переменные окружения
+4. Откройте Issue в репозитории
+
+## 📄 Лицензия
+
+MIT License - можете использовать для любых целей.
 
 ---
 
-**Built with ❤️ for the fitness community**
+**Создано с ❤️ для спортивного сообщества**
 
-For more information, visit the [GitHub repository](https://github.com/zaharenok/SportChat.git)
+🚀 **GitHub**: https://github.com/zaharenok  
+💪 **Начните тренироваться с ИИ уже сегодня!**
