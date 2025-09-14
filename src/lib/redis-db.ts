@@ -374,18 +374,29 @@ export const goalsDb = {
     dueDate: string
     isCompleted: boolean
   }>): Promise<Goal> {
+    console.log('🎯 DB: Updating goal', goalId, 'with updates:', updates)
+    
     const goals = await redisDb.readArray<Goal>('goals')
+    console.log('🎯 DB: Found', goals.length, 'goals total')
+    
     const goalIndex = goals.findIndex(g => g.id === goalId)
+    console.log('🎯 DB: Goal index:', goalIndex)
     
     if (goalIndex === -1) {
+      console.log('❌ DB: Goal not found with ID:', goalId)
       throw new Error('Goal not found')
     }
     
     const goal = goals[goalIndex]
+    console.log('🎯 DB: Current goal:', { title: goal.title, current_value: goal.current_value, target_value: goal.target_value })
+    
     if (updates.title !== undefined) goal.title = updates.title
     if (updates.description !== undefined) goal.description = updates.description
     if (updates.targetValue !== undefined) goal.target_value = updates.targetValue
-    if (updates.currentValue !== undefined) goal.current_value = updates.currentValue
+    if (updates.currentValue !== undefined) {
+      console.log('🎯 DB: Updating current_value from', goal.current_value, 'to', updates.currentValue)
+      goal.current_value = updates.currentValue
+    }
     if (updates.unit !== undefined) goal.unit = updates.unit
     if (updates.category !== undefined) goal.category = updates.category
     if (updates.dueDate !== undefined) goal.due_date = updates.dueDate
@@ -394,7 +405,11 @@ export const goalsDb = {
     goal.updated_at = utils.getCurrentTimestamp()
     
     goals[goalIndex] = goal
+    console.log('🎯 DB: Updated goal:', { title: goal.title, current_value: goal.current_value, target_value: goal.target_value })
+    
     await redisDb.writeArray('goals', goals)
+    console.log('✅ DB: Goal saved to database successfully')
+    
     return goal
   },
 

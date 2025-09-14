@@ -46,11 +46,21 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { goalId, title, description, targetValue, currentValue, unit, category, dueDate, isCompleted } = await request.json()
+    const body = await request.json()
+    console.log('🎯 API: Received goal update request:', body)
+    
+    const { goalId, title, description, targetValue, currentValue, unit, category, dueDate, isCompleted } = body
     
     if (!goalId) {
+      console.log('❌ API: goalId is missing')
       return NextResponse.json({ error: 'goalId is required' }, { status: 400 })
     }
+
+    console.log('🎯 API: Updating goal with data:', {
+      goalId,
+      currentValue,
+      isCompleted
+    })
 
     const updatedGoal = await goalsDb.update(goalId, {
       title,
@@ -62,9 +72,11 @@ export async function PUT(request: NextRequest) {
       dueDate,
       isCompleted
     })
+    
+    console.log('✅ API: Goal updated successfully:', updatedGoal)
     return NextResponse.json(updatedGoal)
   } catch (error) {
-    console.error('Error updating goal:', error)
+    console.error('❌ API: Error updating goal:', error)
     return NextResponse.json({ error: 'Failed to update goal' }, { status: 500 })
   }
 }

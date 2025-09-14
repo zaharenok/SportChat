@@ -7,6 +7,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { DayManager } from "@/components/DayManager";
 import { LoginForm } from "@/components/LoginForm";
 import { UserProfile } from "@/components/UserProfile";
+import { ChatProvider } from "@/lib/chat-context";
 import { Day, daysApi, utils } from "@/lib/client-api";
 import { Calendar, X } from "lucide-react";
 
@@ -142,10 +143,11 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
-      
-      <main className="max-w-7xl mx-auto px-4 py-4">
+    <ChatProvider>
+      <div className="min-h-screen">
+        <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+        
+        <main className="max-w-7xl mx-auto px-4 py-4">
         {activeTab === "profile" ? (
           /* Полноэкранный профиль */
           <div className="max-w-2xl mx-auto">
@@ -223,5 +225,6 @@ export default function Home() {
         )}
       </main>
     </div>
+    </ChatProvider>
   );
 }

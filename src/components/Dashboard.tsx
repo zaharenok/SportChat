@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Clock, Flame, Trash2, Plus, Edit, X } from "lucide-react";
+import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Flame, Trash2, Plus, Edit, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, Workout } from "@/lib/client-api";
@@ -139,29 +139,45 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
     const recentWorkouts = workouts.filter(w => new Date(w.created_at) >= weekAgo);
-    const totalWorkouts = recentWorkouts.length;
     
-    // Подсчет общего количества упражнений и их продолжительности
-    let totalExercises = 0;
-    let avgSets = 0;
-    let totalReps = 0;
+    // 1. ТРЕНИРОВКИ = количество дней когда занимался
+    const uniqueTrainingDays = new Set(
+      recentWorkouts.map(w => w.created_at.split('T')[0])
+    ).size;
     
+    // 2. УПРАЖНЕНИЯ = количество разных типов упражнений за неделю
+    const uniqueExercises = new Set();
     recentWorkouts.forEach(workout => {
-      totalExercises += workout.exercises.length;
       workout.exercises.forEach(exercise => {
-        avgSets += exercise.sets;
-        totalReps += exercise.reps * exercise.sets;
+        uniqueExercises.add(exercise.name.toLowerCase());
       });
     });
-
-    const avgExercisesPerWorkout = totalWorkouts > 0 ? Math.round(totalExercises / totalWorkouts) : 0;
-    const avgSetsPerWorkout = totalWorkouts > 0 ? Math.round(avgSets / totalWorkouts) : 0;
+    
+    // 3. ПОДХОДЫ = среднее количество подходов за тренировку
+    let totalSets = 0;
+    recentWorkouts.forEach(workout => {
+      workout.exercises.forEach(exercise => {
+        totalSets += exercise.sets;
+      });
+    });
+    const avgSetsPerWorkout = uniqueTrainingDays > 0 ? Math.round(totalSets / uniqueTrainingDays) : 0;
+    
+    // 4. ИНТЕНСИВНОСТЬ = среднее количество повторов за подход (более осмысленно)
+    let totalReps = 0;
+    let totalSetsCount = 0;
+    recentWorkouts.forEach(workout => {
+      workout.exercises.forEach(exercise => {
+        totalReps += exercise.reps * exercise.sets;
+        totalSetsCount += exercise.sets;
+      });
+    });
+    const avgRepsPerSet = totalSetsCount > 0 ? Math.round(totalReps / totalSetsCount) : 0;
     
     return {
-      weeklyWorkouts: totalWorkouts,
-      avgExercises: avgExercisesPerWorkout,
-      avgSets: avgSetsPerWorkout,
-      totalReps: totalReps
+      trainingDays: uniqueTrainingDays, // Дни тренировок
+      uniqueExercises: uniqueExercises.size, // Разных упражнений
+      avgSetsPerWorkout: avgSetsPerWorkout, // Подходов за тренировку
+      avgRepsPerSet: avgRepsPerSet // Повторов за подход
     };
   };
 
@@ -262,30 +278,30 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
       {/* Статистические карточки */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={Dumbbell}
-          title="Тренировок в неделю"
-          value={stats.weeklyWorkouts.toString()}
+          icon={Calendar}
+          title="Тренировочных дней"
+          value={stats.trainingDays.toString()}
           change={0}
           color="bg-primary-600"
         />
         <StatCard
-          icon={Clock}
-          title="Упражнений за тренировку"
-          value={stats.avgExercises.toString()}
+          icon={Dumbbell}
+          title="Разных упражнений"
+          value={stats.uniqueExercises.toString()}
           change={0}
           color="bg-primary-500"
         />
         <StatCard
           icon={Flame}
           title="Подходов за тренировку"
-          value={stats.avgSets.toString()}
+          value={stats.avgSetsPerWorkout.toString()}
           change={0}
           color="bg-primary-700"
         />
         <StatCard
           icon={TrendingUp}
-          title="Всего повторов"
-          value={stats.totalReps.toString()}
+          title="Повторов за подход"
+          value={stats.avgRepsPerSet.toString()}
           change={0}
           color="bg-primary-800"
         />
@@ -681,10 +697,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="goal-title" className="block text-sm font-medium text-gray-700 mb-1">
               Название *
             </label>
             <input
+              id="goal-title"
+              name="title"
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -695,10 +713,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="goal-description" className="block text-sm font-medium text-gray-700 mb-1">
               Описание
             </label>
             <textarea
+              id="goal-description"
+              name="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
@@ -709,10 +729,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="goal-target" className="block text-sm font-medium text-gray-700 mb-1">
                 Цель *
               </label>
               <input
+                id="goal-target"
+                name="targetValue"
                 type="number"
                 value={formData.targetValue}
                 onChange={(e) => setFormData({ ...formData, targetValue: e.target.value })}
@@ -722,10 +744,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="goal-current" className="block text-sm font-medium text-gray-700 mb-1">
                 Текущий прогресс
               </label>
               <input
+                id="goal-current"
+                name="currentValue"
                 type="number"
                 value={formData.currentValue}
                 onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
@@ -737,10 +761,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="goal-unit" className="block text-sm font-medium text-gray-700 mb-1">
                 Единица измерения
               </label>
               <input
+                id="goal-unit"
+                name="unit"
                 type="text"
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
@@ -749,10 +775,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="goal-category" className="block text-sm font-medium text-gray-700 mb-1">
                 Категория
               </label>
               <select
+                id="goal-category"
+                name="category"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
@@ -765,10 +793,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="goal-duedate" className="block text-sm font-medium text-gray-700 mb-1">
               Срок выполнения
             </label>
             <input
+              id="goal-duedate"
+              name="dueDate"
               type="date"
               value={formData.dueDate}
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
