@@ -21,15 +21,14 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  // availableUsers removed - no longer needed without user selection
   const [isLoading, setIsLoading] = useState(true);
-  // dayManagerCollapsed removed - no longer needed in new layout
   const [showMobileDayManager, setShowMobileDayManager] = useState(false);
+  // Состояние для принудительного обновления данных в Dashboard
+  const [dashboardUpdateTrigger, setDashboardUpdateTrigger] = useState(0);
 
   // Проверка аутентификации при загрузке
   useEffect(() => {
     checkAuth()
-    // loadAvailableUsers() removed - no longer needed
   }, [])
 
   // Автоматическое создание и переключение на сегодняшний день
@@ -62,8 +61,6 @@ export default function Home() {
       setIsLoading(false)
     }
   }
-
-  // loadAvailableUsers function removed - no longer needed without user selection
 
   const checkAndCreateTodayDay = async () => {
     if (!currentUser) return
@@ -118,6 +115,12 @@ export default function Home() {
     setCurrentUser(updatedUser)
   }
 
+  // Функция для обновления данных в дашборде после сохранения тренировки
+  const handleWorkoutSaved = () => {
+    console.log('🔄 Workout saved, triggering dashboard refresh')
+    setDashboardUpdateTrigger(prev => prev + 1)
+  }
+
   // Показываем форму логина, если пользователь не аутентифицирован
   if (isLoading) {
     return (
@@ -142,7 +145,7 @@ export default function Home() {
     <div className="min-h-screen">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
       
-      <main className="max-w-7xl mx-auto p-4 pb-8">
+      <main className="max-w-7xl mx-auto px-4 py-4">
         {activeTab === "profile" ? (
           /* Полноэкранный профиль */
           <div className="max-w-2xl mx-auto">
@@ -162,19 +165,22 @@ export default function Home() {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 lg:gap-6 h-[calc(100vh-140px)]">
-            {/* Основной контент занимает всю ширину */}
-            <div className="w-full">
+          <>
+            <div className="w-full h-[calc(100vh-140px)]">
               {activeTab === "chat" ? (
                 <Chat 
                   selectedDay={selectedDay} 
                   selectedUser={currentUser}
+                  onWorkoutSaved={handleWorkoutSaved}
                 />
               ) : (
-                <Dashboard 
-                  selectedDay={selectedDay}
-                  selectedUser={currentUser}
-                />
+                <div className="h-full overflow-y-auto">
+                  <Dashboard 
+                    selectedDay={selectedDay}
+                    selectedUser={currentUser}
+                    updateTrigger={dashboardUpdateTrigger}
+                  />
+                </div>
               )}
             </div>
             
@@ -188,7 +194,7 @@ export default function Home() {
                 <Calendar className="w-6 h-6" />
               </button>
             </div>
-          </div>
+          </>
         )}
 
         {/* Мобильный оверлей для управления днями */}

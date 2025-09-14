@@ -25,9 +25,10 @@ interface ChatResponse {
 interface ChatProps {
   selectedDay: Day | null;
   selectedUser: User;
+  onWorkoutSaved?: () => void; // Колбек для уведомления о сохранении тренировки
 }
 
-export function Chat({ selectedDay, selectedUser }: ChatProps) {
+export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -165,12 +166,24 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: ChatResponse[] = await response.json();
+      const data: ChatResponse[] | { output: { message: string; workout_logged?: boolean; parsed_exercises?: Exercise[]; suggestions?: string[] } } = await response.json();
       
       console.log("Full webhook response:", JSON.stringify(data, null, 2));
       
-      if (data && data.length > 0 && data[0] && data[0].output) {
-        const output = data[0].output;
+      // Проверяем структуру ответа - может быть массив или объект
+      let output = null;
+      
+      if (data && Array.isArray(data) && data.length > 0 && data[0] && data[0].output) {
+        // Массив ответов
+        output = data[0].output;
+        console.log("Found array response structure");
+      } else if (data && !Array.isArray(data) && 'output' in data) {
+        // Объект ответа
+        output = data.output;
+        console.log("Found object response structure");
+      }
+      
+      if (output) {
         console.log("Extracted output:", output);
         console.log("Message:", output.message);
         console.log("Suggestions:", output.suggestions);
@@ -199,6 +212,11 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
               output.parsed_exercises
             );
             console.log("✅ Workout saved successfully:", savedWorkout);
+            
+            // Уведомляем родительский компонент об обновлении данных
+            if (onWorkoutSaved) {
+              onWorkoutSaved();
+            }
           } catch (error) {
             console.error("❌ Error saving workout:", error);
           }
@@ -219,22 +237,8 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
         console.log("No valid data structure found in response");
         console.log("Data structure:", data);
         
-        // Попробуем обработать другие возможные структуры ответа
-        if (data && typeof data === 'object') {
-          // Если ответ пришел не в массиве
-          const singleResponse = data as { output?: { message?: string; suggestions?: string[] } };
-          if (singleResponse.output) {
-            console.log("Found single response with output");
-            const output = singleResponse.output;
-            if (output.message) {
-              addMessageWithDelay(output.message, 1000);
-            }
-            if (output.suggestions && output.suggestions.length > 0) {
-              const suggestionsText = "💡 Рекомендации:\n" + output.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n");
-              addMessageWithDelay(suggestionsText, 6000);
-            }
-          }
-        }
+        // Fallback для неизвестной структуры
+        addMessageWithDelay("Получен ответ в неожиданном формате. Проверьте настройки webhook.", 1000);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -269,9 +273,9 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-primary-200">
+    <div className="h-full max-w-4xl mx-auto flex flex-col bg-white rounded-lg shadow-sm border border-primary-200">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ minHeight: 0 }}>
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -319,7 +323,7 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-primary-200 p-4">
+      <div className="border-t border-primary-200 p-6 bg-gray-50/50">
         <div className="flex space-x-3">
           <div className="flex-1 relative">
             <textarea

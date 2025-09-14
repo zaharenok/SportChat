@@ -48,10 +48,13 @@ export interface Goal {
   id: string
   user_id: string
   title: string
-  current: number
-  target: number
-  unit: string
-  progress: number
+  description?: string
+  current_value: number
+  target_value: number
+  unit?: string
+  category?: string
+  due_date?: string
+  is_completed?: boolean
   created_at: string
   updated_at: string
 }
@@ -85,19 +88,33 @@ export const utils = {
 export const redisDb = {
   async readArray<T>(key: string): Promise<T[]> {
     try {
+      console.log(`🔍 Redis: Reading array from key '${key}'...`)
       const data = await redis.get(key)
-      return data ? (Array.isArray(data) ? data : []) : []
+      console.log(`🔍 Redis: Raw data for '${key}':`, data ? 'Data exists' : 'No data', typeof data)
+      const result = data ? (Array.isArray(data) ? data : []) : []
+      console.log(`🔍 Redis: Returning ${result.length} items for '${key}'`)
+      return result
     } catch (error) {
-      console.error(`Error reading ${key}:`, error)
+      console.error(`❌ Redis: Error reading ${key}:`, error)
+      console.error(`❌ Redis: Error details:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      })
       return []
     }
   },
 
   async writeArray<T>(key: string, data: T[]): Promise<void> {
     try {
+      console.log(`✍️ Redis: Writing array to key '${key}' with ${data.length} items...`)
       await redis.set(key, data)
+      console.log(`✅ Redis: Successfully wrote to '${key}'`)
     } catch (error) {
-      console.error(`Error writing ${key}:`, error)
+      console.error(`❌ Redis: Error writing ${key}:`, error)
+      console.error(`❌ Redis: Error details:`, {
+        message: error instanceof Error ? error.message : 'Unknown error', 
+        stack: error instanceof Error ? error.stack : undefined
+      })
       throw error
     }
   }
@@ -269,14 +286,20 @@ export const workoutsDb = {
   },
 
   async getByUser(userId: string): Promise<Workout[]> {
+    console.log('💾 DB: Getting workouts by user:', userId)
     const workouts = await redisDb.readArray<Workout>('workouts')
-    return workouts
-      .filter(workout => workout.user_id === userId)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    console.log('💾 DB: Total workouts in database:', workouts.length)
+    const userWorkouts = workouts.filter(workout => workout.user_id === userId)
+    console.log('💾 DB: User workouts found:', userWorkouts.length)
+    console.log('💾 DB: User workouts:', userWorkouts)
+    return userWorkouts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   },
 
   async create(userId: string, dayId: string, chatMessageId: string, exercises: Exercise[]): Promise<Workout> {
+    console.log('💾 DB: Creating workout in database:', { userId, dayId, chatMessageId, exercisesCount: exercises?.length })
+    
     const workouts = await redisDb.readArray<Workout>('workouts')
+    console.log('💾 DB: Current workouts count:', workouts.length)
     
     const newWorkout: Workout = {
       id: `workout-${utils.generateId()}`,
@@ -288,8 +311,12 @@ export const workoutsDb = {
       updated_at: utils.getCurrentTimestamp()
     }
 
+    console.log('💾 DB: New workout created:', newWorkout)
+    
     workouts.push(newWorkout)
     await redisDb.writeArray('workouts', workouts)
+    
+    console.log('💾 DB: Total workouts after save:', workouts.length)
     return newWorkout
   },
 
@@ -317,7 +344,7 @@ export const goalsDb = {
     dueDate?: string
   }): Promise<Goal> {
     const goal: Goal = {
-      id: generateId('goal'),
+      id: `goal-${utils.generateId()}`,
       user_id: userId,
       title: goalData.title,
       description: goalData.description || '',
@@ -325,7 +352,8 @@ export const goalsDb = {
       current_value: goalData.currentValue || 0,
       unit: goalData.unit || '',
       category: goalData.category || 'fitness',
-      created_at: new Date().toISOString(),
+      created_at: utils.getCurrentTimestamp(),
+      updated_at: utils.getCurrentTimestamp(),
       due_date: goalData.dueDate,
       is_completed: false
     }
@@ -363,7 +391,7 @@ export const goalsDb = {
     if (updates.dueDate !== undefined) goal.due_date = updates.dueDate
     if (updates.isCompleted !== undefined) goal.is_completed = updates.isCompleted
     
-    goal.updated_at = new Date().toISOString()
+    goal.updated_at = utils.getCurrentTimestamp()
     
     goals[goalIndex] = goal
     await redisDb.writeArray('goals', goals)

@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const dayId = searchParams.get('dayId')
     
+    console.log('📖 API: Fetching workouts for:', { userId, dayId })
+    
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
@@ -15,10 +17,13 @@ export async function GET(request: NextRequest) {
     let workouts
     if (dayId) {
       workouts = await workoutsDb.getByDay(dayId)
+      console.log('📖 API: Found workouts by day:', workouts?.length || 0)
     } else {
       workouts = await workoutsDb.getByUser(userId)
+      console.log('📖 API: Found workouts by user:', workouts?.length || 0)
     }
 
+    console.log('📖 API: Returning workouts:', workouts)
     return NextResponse.json(workouts)
   } catch (error) {
     console.error('Error fetching workouts:', error)
@@ -30,16 +35,26 @@ export async function POST(request: NextRequest) {
   try {
     const { userId, dayId, chatMessageId, exercises } = await request.json()
     
+    console.log('🏋️ API: Creating workout with data:', {
+      userId,
+      dayId, 
+      chatMessageId,
+      exercises: exercises?.length ? exercises : 'NO EXERCISES',
+      exerciseDetails: exercises
+    })
+    
     if (!userId || !dayId || !chatMessageId || !exercises) {
+      console.error('❌ API: Missing required fields:', { userId: !!userId, dayId: !!dayId, chatMessageId: !!chatMessageId, exercises: !!exercises })
       return NextResponse.json({ 
         error: 'userId, dayId, chatMessageId, and exercises are required' 
       }, { status: 400 })
     }
 
     const newWorkout = await workoutsDb.create(userId, dayId, chatMessageId, exercises)
+    console.log('✅ API: Workout created successfully:', newWorkout)
     return NextResponse.json(newWorkout, { status: 201 })
   } catch (error) {
-    console.error('Error creating workout:', error)
+    console.error('❌ API: Error creating workout:', error)
     return NextResponse.json({ error: 'Failed to create workout' }, { status: 500 })
   }
 }

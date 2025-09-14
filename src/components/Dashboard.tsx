@@ -13,9 +13,10 @@ import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, W
 interface DashboardProps {
   selectedDay: Day | null;
   selectedUser: User;
+  updateTrigger?: number; // Триггер для принудительного обновления данных
 }
 
-export function Dashboard({ selectedUser }: DashboardProps) {
+export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   const [activeChart, setActiveChart] = useState<"weekly" | "monthly">("weekly");
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -33,15 +34,21 @@ export function Dashboard({ selectedUser }: DashboardProps) {
     if (selectedUser) {
       loadData();
     }
-  }, [selectedUser]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedUser, updateTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     try {
+      console.log('📊 Dashboard: Loading data...')
       const [goalsData, achievementsData, workoutsData] = await Promise.all([
         goalsApi.getAll(selectedUser.id),
         achievementsApi.getAll(selectedUser.id),
         workoutsApi.getByUser(selectedUser.id)
       ]);
+      console.log('📊 Dashboard: Loaded data:', {
+        goals: goalsData.length,
+        achievements: achievementsData.length,
+        workouts: workoutsData.length
+      })
       setGoals(goalsData);
       setAchievements(achievementsData);
       setWorkouts(workoutsData);
@@ -95,7 +102,15 @@ export function Dashboard({ selectedUser }: DashboardProps) {
     }
   };
 
-  const handleGoalSubmit = async (goalData: any) => {
+  const handleGoalSubmit = async (goalData: {
+    title: string
+    description?: string
+    targetValue: number
+    currentValue?: number
+    unit?: string
+    category?: string
+    dueDate?: string
+  }) => {
     try {
       if (editingGoal) {
         // Обновление существующей цели
@@ -375,7 +390,7 @@ export function Dashboard({ selectedUser }: DashboardProps) {
               <div className="text-center py-8 text-gray-500">
                 <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">Нет целей</p>
-                <p className="text-xs">Нажмите "Добавить", чтобы создать первую цель</p>
+                <p className="text-xs">Нажмите &quot;Добавить&quot;, чтобы создать первую цель</p>
               </div>
             ) : (
               goals.map((goal) => (
@@ -594,7 +609,15 @@ export function Dashboard({ selectedUser }: DashboardProps) {
 // Компонент формы для целей
 interface GoalFormModalProps {
   goal?: Goal | null;
-  onSubmit: (goalData: any) => void;
+  onSubmit: (goalData: {
+    title: string
+    description?: string
+    targetValue: number
+    currentValue?: number
+    unit?: string
+    category?: string
+    dueDate?: string
+  }) => void;
   onClose: () => void;
 }
 

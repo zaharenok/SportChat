@@ -119,11 +119,14 @@ export const chatApi = {
 // API для тренировок
 export const workoutsApi = {
   async getByUser(userId: string) {
+    console.log('🌐 CLIENT: Fetching workouts for user:', userId)
     const response = await fetch(`/api/workouts?userId=${userId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch workouts')
     }
-    return response.json()
+    const data = await response.json()
+    console.log('🌐 CLIENT: Received workouts:', data?.length || 0, data)
+    return data
   },
 
   async getByDay(userId: string, dayId: string) {
