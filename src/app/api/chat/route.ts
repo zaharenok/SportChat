@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { chatDb } from '@/lib/json-db'
+import { chatDb } from '@/lib/redis-db'
 
 export async function GET(request: NextRequest) {
   try {

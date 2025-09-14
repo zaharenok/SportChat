@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Edit3, Trash2, Check, X } from "lucide-react";
+import { Calendar, Plus, Edit3, Trash2, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { daysApi, utils, Day, User } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
@@ -10,15 +10,21 @@ interface DayManagerProps {
   onDaySelect: (day: Day) => void;
   selectedDay: Day | null;
   selectedUser: User;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function DayManager({ onDaySelect, selectedDay, selectedUser }: DayManagerProps) {
+export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed = false, onToggleCollapse }: DayManagerProps) {
   const [days, setDays] = useState<Day[]>([]);
   const [loading, setLoading] = useState(true);
   const [newDate, setNewDate] = useState("");
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editDate, setEditDate] = useState("");
   const [isAddingDay, setIsAddingDay] = useState(false);
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  
+  const collapsed = isCollapsed !== undefined ? isCollapsed : internalCollapsed;
+  const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(!internalCollapsed));
 
   useEffect(() => {
     if (selectedUser) {
@@ -140,9 +146,20 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser }: DayManage
         <div className="flex items-center space-x-2">
           <Calendar className="w-5 h-5 text-primary-600" />
           <h3 className="text-lg font-semibold text-gray-900">Управление днями</h3>
+          <button
+            onClick={toggleCollapse}
+            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            title={collapsed ? "Развернуть" : "Свернуть"}
+          >
+            {collapsed ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
+          </button>
         </div>
         
-        {!isAddingDay ? (
+        {!collapsed && !isAddingDay ? (
           <button
             onClick={() => setIsAddingDay(true)}
             className="flex items-center space-x-2 px-3 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
@@ -150,7 +167,7 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser }: DayManage
             <Plus className="w-4 h-4" />
             <span className="text-sm font-medium">Добавить день</span>
           </button>
-        ) : (
+        ) : !collapsed ? (
           <div className="flex items-center space-x-2">
             <input
               type="date"
@@ -175,11 +192,20 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser }: DayManage
               <X className="w-4 h-4" />
             </button>
           </div>
-        )}
+        ) : null}
       </div>
 
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        <AnimatePresence>
+      <AnimatePresence>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              <AnimatePresence>
           {days.map((day) => (
             <motion.div
               key={day.id}
@@ -258,14 +284,17 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser }: DayManage
           ))}
         </AnimatePresence>
 
-        {days.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>Нет созданных дней</p>
-            <p className="text-sm">Добавьте свой первый день тренировок</p>
-          </div>
+              {days.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>Нет созданных дней</p>
+                  <p className="text-sm">Добавьте свой первый день тренировок</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 }

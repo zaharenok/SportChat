@@ -1,25 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { usersDb } from '@/lib/json-db'
+import { usersDb } from '@/lib/redis-db'
 import { authUtils } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Login attempt...')
     const { email } = await request.json()
+    console.log('Login email:', email)
     
     if (!email) {
+      console.log('No email provided')
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
 
     // Ищем пользователя по email
-    const users = await usersDb.getAll()
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase())
+    console.log('Looking up user by email...')
+    const user = await usersDb.getByEmail(email)
+    console.log('User found:', user ? 'Yes' : 'No')
     
     if (!user) {
+      console.log('User not found for email:', email)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Создаем сессию
+    console.log('Creating session for user:', user.id)
     const token = await authUtils.createSession(user.id)
+    console.log('Session created, token length:', token.length)
 
     const response = NextResponse.json({ 
       success: true, 

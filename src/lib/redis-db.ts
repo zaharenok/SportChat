@@ -1,7 +1,6 @@
-import fs from 'fs/promises'
-import path from 'path'
+import { redis } from './redis'
 
-// Интерфейсы данных
+// Интерфейсы данных (те же что и в json-db.ts)
 export interface User {
   id: string
   name: string
@@ -29,7 +28,7 @@ export interface Workout {
   id: string
   user_id: string
   day_id: string
-  chat_message_id: string // связь с сообщением чата
+  chat_message_id: string
   exercises: Exercise[]
   created_at: string
   updated_at: string
@@ -82,28 +81,23 @@ export const utils = {
   }
 }
 
-// Базовые операции с файлами
-const DB_PATH = path.join(process.cwd(), 'data', 'db')
-
-export const fileDb = {
-  async readFile<T>(filename: string): Promise<T[]> {
+// Базовые операции с Redis
+export const redisDb = {
+  async readArray<T>(key: string): Promise<T[]> {
     try {
-      const filePath = path.join(DB_PATH, filename)
-      const data = await fs.readFile(filePath, 'utf-8')
-      return JSON.parse(data)
+      const data = await redis.get(key)
+      return data ? (Array.isArray(data) ? data : []) : []
     } catch (error) {
-      console.error(`Error reading ${filename}:`, error)
+      console.error(`Error reading ${key}:`, error)
       return []
     }
   },
 
-  async writeFile<T>(filename: string, data: T[]): Promise<void> {
+  async writeArray<T>(key: string, data: T[]): Promise<void> {
     try {
-      const filePath = path.join(DB_PATH, filename)
-      await fs.mkdir(DB_PATH, { recursive: true })
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+      await redis.set(key, data)
     } catch (error) {
-      console.error(`Error writing ${filename}:`, error)
+      console.error(`Error writing ${key}:`, error)
       throw error
     }
   }
@@ -112,7 +106,7 @@ export const fileDb = {
 // API для пользователей
 export const usersDb = {
   async getAll(): Promise<User[]> {
-    return await fileDb.readFile<User>('users.json')
+    return await redisDb.readArray<User>('users')
   },
 
   async getById(id: string): Promise<User | null> {
@@ -120,24 +114,63 @@ export const usersDb = {
     return users.find(user => user.id === id) || null
   },
 
+  async getByEmail(email: string): Promise<User | null> {
+    const users = await this.getAll()
+    return users.find(user => user.email.toLowerCase() === email.toLowerCase()) || null
+  },
+
   async create(name: string, email: string): Promise<User> {
     const users = await this.getAll()
+    
+    // Проверяем, не существует ли уже пользователь с таким email
+    const existingUser = users.find(user => user.email.toLowerCase() === email.toLowerCase())
+    if (existingUser) {
+      throw new Error('User with this email already exists')
+    }
+
     const newUser: User = {
       id: `user-${utils.generateId()}`,
       name,
-      email,
+      email: email.toLowerCase(),
       created_at: utils.getCurrentTimestamp()
     }
     users.push(newUser)
-    await fileDb.writeFile('users.json', users)
+    await redisDb.writeArray('users', users)
     return newUser
+  },
+
+  async update(userId: string, name: string, email: string): Promise<User> {
+    const users = await this.getAll()
+    
+    // Проверяем, что email не занят другим пользователем
+    const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.id !== userId)
+    if (existingUser) {
+      throw new Error('Email already taken')
+    }
+
+    // Обновляем пользователя
+    const updatedUsers = users.map(user => 
+      user.id === userId 
+        ? { ...user, name, email: email.toLowerCase(), updated_at: utils.getCurrentTimestamp() }
+        : user
+    )
+
+    await redisDb.writeArray('users', updatedUsers)
+    
+    // Возвращаем обновленного пользователя
+    const updatedUser = updatedUsers.find(u => u.id === userId)
+    if (!updatedUser) {
+      throw new Error('User not found')
+    }
+    
+    return updatedUser
   }
 }
 
 // API для дней
 export const daysDb = {
   async getAll(): Promise<Day[]> {
-    return await fileDb.readFile<Day>('days.json')
+    return await redisDb.readArray<Day>('days')
   },
 
   async getByUser(userId: string): Promise<Day[]> {
@@ -170,7 +203,7 @@ export const daysDb = {
     }
 
     days.push(newDay)
-    await fileDb.writeFile('days.json', days)
+    await redisDb.writeArray('days', days)
     return newDay
   },
 
@@ -185,30 +218,30 @@ export const daysDb = {
   async delete(id: string): Promise<void> {
     const days = await this.getAll()
     const filteredDays = days.filter(day => day.id !== id)
-    await fileDb.writeFile('days.json', filteredDays)
+    await redisDb.writeArray('days', filteredDays)
 
     // Также удаляем связанные данные
-    const workouts = await fileDb.readFile<Workout>('workouts.json')
+    const workouts = await redisDb.readArray<Workout>('workouts')
     const filteredWorkouts = workouts.filter(workout => workout.day_id !== id)
-    await fileDb.writeFile('workouts.json', filteredWorkouts)
+    await redisDb.writeArray('workouts', filteredWorkouts)
 
-    const messages = await fileDb.readFile<ChatMessage>('chat_messages.json')
+    const messages = await redisDb.readArray<ChatMessage>('chat_messages')
     const filteredMessages = messages.filter(message => message.day_id !== id)
-    await fileDb.writeFile('chat_messages.json', filteredMessages)
+    await redisDb.writeArray('chat_messages', filteredMessages)
   }
 }
 
 // API для сообщений чата
 export const chatDb = {
   async getByDay(dayId: string): Promise<ChatMessage[]> {
-    const messages = await fileDb.readFile<ChatMessage>('chat_messages.json')
+    const messages = await redisDb.readArray<ChatMessage>('chat_messages')
     return messages
       .filter(msg => msg.day_id === dayId)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   },
 
   async create(userId: string, dayId: string, message: string, isUser: boolean): Promise<ChatMessage> {
-    const messages = await fileDb.readFile<ChatMessage>('chat_messages.json')
+    const messages = await redisDb.readArray<ChatMessage>('chat_messages')
     
     const newMessage: ChatMessage = {
       id: `msg-${utils.generateId()}`,
@@ -221,7 +254,7 @@ export const chatDb = {
     }
 
     messages.push(newMessage)
-    await fileDb.writeFile('chat_messages.json', messages)
+    await redisDb.writeArray('chat_messages', messages)
     return newMessage
   }
 }
@@ -229,21 +262,21 @@ export const chatDb = {
 // API для тренировок
 export const workoutsDb = {
   async getByDay(dayId: string): Promise<Workout[]> {
-    const workouts = await fileDb.readFile<Workout>('workouts.json')
+    const workouts = await redisDb.readArray<Workout>('workouts')
     return workouts
       .filter(workout => workout.day_id === dayId)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   },
 
   async getByUser(userId: string): Promise<Workout[]> {
-    const workouts = await fileDb.readFile<Workout>('workouts.json')
+    const workouts = await redisDb.readArray<Workout>('workouts')
     return workouts
       .filter(workout => workout.user_id === userId)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   },
 
   async create(userId: string, dayId: string, chatMessageId: string, exercises: Exercise[]): Promise<Workout> {
-    const workouts = await fileDb.readFile<Workout>('workouts.json')
+    const workouts = await redisDb.readArray<Workout>('workouts')
     
     const newWorkout: Workout = {
       id: `workout-${utils.generateId()}`,
@@ -256,21 +289,21 @@ export const workoutsDb = {
     }
 
     workouts.push(newWorkout)
-    await fileDb.writeFile('workouts.json', workouts)
+    await redisDb.writeArray('workouts', workouts)
     return newWorkout
   },
 
   async delete(id: string): Promise<void> {
-    const workouts = await fileDb.readFile<Workout>('workouts.json')
+    const workouts = await redisDb.readArray<Workout>('workouts')
     const filteredWorkouts = workouts.filter(workout => workout.id !== id)
-    await fileDb.writeFile('workouts.json', filteredWorkouts)
+    await redisDb.writeArray('workouts', filteredWorkouts)
   }
 }
 
 // API для целей
 export const goalsDb = {
   async getByUser(userId: string): Promise<Goal[]> {
-    const goals = await fileDb.readFile<Goal>('goals.json')
+    const goals = await redisDb.readArray<Goal>('goals')
     return goals.filter(goal => goal.user_id === userId)
   }
 }
@@ -278,7 +311,7 @@ export const goalsDb = {
 // API для достижений
 export const achievementsDb = {
   async getByUser(userId: string): Promise<Achievement[]> {
-    const achievements = await fileDb.readFile<Achievement>('achievements.json')
+    const achievements = await redisDb.readArray<Achievement>('achievements')
     return achievements.filter(achievement => achievement.user_id === userId)
   }
 }

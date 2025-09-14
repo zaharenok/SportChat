@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { goalsDb } from '@/lib/json-db'
+import { goalsDb } from '@/lib/redis-db'
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { achievementsDb } from '@/lib/json-db'
+import { achievementsDb } from '@/lib/redis-db'
 
 export async function GET(request: NextRequest) {
   try {

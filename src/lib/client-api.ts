@@ -1,8 +1,8 @@
 // Client-side API для работы с JSON базой данных
 
-// Интерфейсы (экспортируем из json-db)
-export type { User, Day, Workout, ChatMessage, Goal, Achievement } from './json-db'
-import type { Day } from './json-db'
+// Интерфейсы (экспортируем из redis-db теперь)
+export type { User, Day, Workout, ChatMessage, Goal, Achievement, Exercise } from './redis-db'
+import type { Day, Exercise } from './redis-db'
 
 // Утилиты
 export const utils = {
@@ -111,6 +111,49 @@ export const chatApi = {
     })
     if (!response.ok) {
       throw new Error('Failed to create chat message')
+    }
+    return response.json()
+  }
+}
+
+// API для тренировок
+export const workoutsApi = {
+  async getByUser(userId: string) {
+    const response = await fetch(`/api/workouts?userId=${userId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch workouts')
+    }
+    return response.json()
+  },
+
+  async getByDay(userId: string, dayId: string) {
+    const response = await fetch(`/api/workouts?userId=${userId}&dayId=${dayId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch workouts')
+    }
+    return response.json()
+  },
+
+  async create(userId: string, dayId: string, chatMessageId: string, exercises: Exercise[]) {
+    const response = await fetch('/api/workouts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, dayId, chatMessageId, exercises }),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to create workout')
+    }
+    return response.json()
+  },
+
+  async delete(workoutId: string) {
+    const response = await fetch(`/api/workouts?workoutId=${workoutId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error('Failed to delete workout')
     }
     return response.json()
   }

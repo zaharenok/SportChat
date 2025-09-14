@@ -4,31 +4,11 @@ import { useState, useEffect } from "react";
 import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Clock, Flame, Trash2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
-import { Day, User, goalsApi, achievementsApi, Goal, Achievement } from "@/lib/client-api";
+import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, Workout } from "@/lib/client-api";
 
-// Моковые данные для демонстрации
-const weeklyStats = [
-  { day: "ПН", workouts: 1, duration: 45 },
-  { day: "ВТ", workouts: 0, duration: 0 },
-  { day: "СР", workouts: 1, duration: 60 },
-  { day: "ЧТ", workouts: 1, duration: 35 },
-  { day: "ПТ", workouts: 0, duration: 0 },
-  { day: "СБ", workouts: 1, duration: 75 },
-  { day: "ВС", workouts: 0, duration: 0 },
-];
+// Removed mock data - charts now use real workout data calculated below
 
-const monthlyProgress = [
-  { month: "Янв", workouts: 12, avg: 45 },
-  { month: "Фев", workouts: 16, avg: 50 },
-  { month: "Мар", workouts: 18, avg: 48 },
-  { month: "Апр", workouts: 20, avg: 52 },
-];
-
-const recentWorkouts = [
-  { id: 1, date: "2024-01-15", type: "Силовая", duration: 60, exercises: ["Приседания", "Жим лежа", "Становая"] },
-  { id: 2, date: "2024-01-13", type: "Кардио", duration: 45, exercises: ["Бег", "Велосипед", "Эллипс"] },
-  { id: 3, date: "2024-01-11", type: "Функциональная", duration: 50, exercises: ["Берпи", "Отжимания", "Планка"] },
-];
+// Removed mock data - using real workout data from API
 
 interface DashboardProps {
   selectedDay: Day | null;
@@ -37,43 +17,163 @@ interface DashboardProps {
 
 export function Dashboard({ selectedUser }: DashboardProps) {
   const [activeChart, setActiveChart] = useState<"weekly" | "monthly">("weekly");
-  const [workouts, setWorkouts] = useState(recentWorkouts);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; workoutId: number | null }>({ 
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; workoutId: string | null }>({ 
     show: false, 
     workoutId: null 
   });
+  // Collapsible widgets state - reserved for future implementation
+  // const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (selectedUser) {
-      const loadData = async () => {
-        const [goalsData, achievementsData] = await Promise.all([
-          goalsApi.getAll(selectedUser.id),
-          achievementsApi.getAll(selectedUser.id)
-        ]);
-        setGoals(goalsData);
-        setAchievements(achievementsData);
-      };
-
       loadData();
     }
-  }, [selectedUser]);
+  }, [selectedUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDeleteWorkout = (workoutId: number) => {
+  const loadData = async () => {
+    try {
+      const [goalsData, achievementsData, workoutsData] = await Promise.all([
+        goalsApi.getAll(selectedUser.id),
+        achievementsApi.getAll(selectedUser.id),
+        workoutsApi.getByUser(selectedUser.id)
+      ]);
+      setGoals(goalsData);
+      setAchievements(achievementsData);
+      setWorkouts(workoutsData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  };
+
+  // Collapsible widget functionality - reserved for future use
+  // const toggleWidget = (widgetId: string) => {
+  //   const newCollapsed = new Set(collapsedWidgets);
+  //   if (newCollapsed.has(widgetId)) {
+  //     newCollapsed.delete(widgetId);
+  //   } else {
+  //     newCollapsed.add(widgetId);
+  //   }
+  //   setCollapsedWidgets(newCollapsed);
+  // };
+
+  const handleDeleteWorkout = (workoutId: string) => {
     setDeleteConfirmation({ show: true, workoutId });
   };
 
-  const confirmDeleteWorkout = () => {
+  const confirmDeleteWorkout = async () => {
     if (deleteConfirmation.workoutId) {
-      setWorkouts(workouts.filter(workout => workout.id !== deleteConfirmation.workoutId));
-      setDeleteConfirmation({ show: false, workoutId: null });
+      try {
+        await workoutsApi.delete(deleteConfirmation.workoutId);
+        setWorkouts(workouts.filter(workout => workout.id !== deleteConfirmation.workoutId));
+        setDeleteConfirmation({ show: false, workoutId: null });
+      } catch (error) {
+        console.error('Error deleting workout:', error);
+      }
     }
   };
 
   const cancelDeleteWorkout = () => {
     setDeleteConfirmation({ show: false, workoutId: null });
   };
+
+  // Вычисляем динамическую статистику на основе реальных данных
+  const calculateStats = () => {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const recentWorkouts = workouts.filter(w => new Date(w.created_at) >= weekAgo);
+    const totalWorkouts = recentWorkouts.length;
+    
+    // Подсчет общего количества упражнений и их продолжительности
+    let totalExercises = 0;
+    let avgSets = 0;
+    let totalReps = 0;
+    
+    recentWorkouts.forEach(workout => {
+      totalExercises += workout.exercises.length;
+      workout.exercises.forEach(exercise => {
+        avgSets += exercise.sets;
+        totalReps += exercise.reps * exercise.sets;
+      });
+    });
+
+    const avgExercisesPerWorkout = totalWorkouts > 0 ? Math.round(totalExercises / totalWorkouts) : 0;
+    const avgSetsPerWorkout = totalWorkouts > 0 ? Math.round(avgSets / totalWorkouts) : 0;
+    
+    return {
+      weeklyWorkouts: totalWorkouts,
+      avgExercises: avgExercisesPerWorkout,
+      avgSets: avgSetsPerWorkout,
+      totalReps: totalReps
+    };
+  };
+
+  // Расчет недельной активности на основе реальных тренировок
+  const calculateWeeklyStats = () => {
+    const now = new Date();
+    const weekdays = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
+    const weeklyData = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dayName = weekdays[date.getDay()];
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayWorkouts = workouts.filter(workout => 
+        workout.created_at.startsWith(dateStr)
+      );
+      
+      // Подсчитываем среднюю продолжительность на основе количества упражнений
+      const avgDuration = dayWorkouts.length > 0 
+        ? Math.round(dayWorkouts.reduce((sum, w) => sum + w.exercises.length * 10, 0) / dayWorkouts.length)
+        : 0;
+
+      weeklyData.push({
+        day: dayName,
+        workouts: dayWorkouts.length,
+        duration: avgDuration
+      });
+    }
+
+    return weeklyData;
+  };
+
+  // Расчет месячной активности
+  const calculateMonthlyStats = () => {
+    const now = new Date();
+    const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    const monthlyData = [];
+
+    for (let i = 3; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = monthNames[monthDate.getMonth()];
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      
+      const monthWorkouts = workouts.filter(workout => {
+        const workoutDate = new Date(workout.created_at);
+        return workoutDate >= monthDate && workoutDate < nextMonth;
+      });
+      
+      const avgDuration = monthWorkouts.length > 0
+        ? Math.round(monthWorkouts.reduce((sum, w) => sum + w.exercises.length * 10, 0) / monthWorkouts.length)
+        : 0;
+
+      monthlyData.push({
+        month: monthName,
+        workouts: monthWorkouts.length,
+        avg: avgDuration
+      });
+    }
+
+    return monthlyData;
+  };
+
+  const stats = calculateStats();
+  const weeklyStats = calculateWeeklyStats();
+  const monthlyProgress = calculateMonthlyStats();
 
   const StatCard = ({ icon: Icon, title, value, change, color }: {
     icon: React.ComponentType<{ className?: string }>;
@@ -110,29 +210,29 @@ export function Dashboard({ selectedUser }: DashboardProps) {
         <StatCard
           icon={Dumbbell}
           title="Тренировок в неделю"
-          value="4"
-          change={25}
+          value={stats.weeklyWorkouts.toString()}
+          change={0}
           color="bg-primary-600"
         />
         <StatCard
           icon={Clock}
-          title="Среднее время"
-          value="52 мин"
-          change={8}
+          title="Упражнений за тренировку"
+          value={stats.avgExercises.toString()}
+          change={0}
           color="bg-primary-500"
         />
         <StatCard
           icon={Flame}
-          title="Калории за тренировку"
-          value="380"
-          change={-2}
+          title="Подходов за тренировку"
+          value={stats.avgSets.toString()}
+          change={0}
           color="bg-primary-700"
         />
         <StatCard
           icon={TrendingUp}
-          title="Стрик"
-          value="7 дней"
-          change={40}
+          title="Всего повторов"
+          value={stats.totalReps.toString()}
+          change={0}
           color="bg-primary-800"
         />
       </div>
@@ -266,31 +366,53 @@ export function Dashboard({ selectedUser }: DashboardProps) {
                 initial={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.3 }}
-                className="group flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors"
+                className="group p-4 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors border border-gray-200"
               >
-                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Dumbbell className="w-5 h-5 text-primary-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-900">{workout.type}</h4>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">{workout.duration} мин</span>
-                      <button
-                        onClick={() => handleDeleteWorkout(workout.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-600 hover:text-red-700"
-                        title="Удалить тренировку"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                      <Dumbbell className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        {new Date(workout.created_at).toLocaleDateString("ru-RU", { day: 'numeric', month: 'long' })}
+                      </h4>
+                      <p className="text-sm text-gray-500">{workout.exercises.length} упражнений</p>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {new Date(workout.date).toLocaleDateString("ru-RU")}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {workout.exercises.join(", ")}
-                  </p>
+                  <button
+                    onClick={() => handleDeleteWorkout(workout.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-100 rounded-lg text-red-600 hover:text-red-700"
+                    title="Удалить тренировку"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="space-y-2">
+                  {workout.exercises.map((exercise, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-100">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-800 text-sm capitalize">{exercise.name}</h5>
+                        <div className="flex items-center space-x-4 mt-1 text-xs text-gray-600">
+                          {exercise.weight > 0 && (
+                            <span className="flex items-center space-x-1">
+                              <span className="font-medium">Вес:</span>
+                              <span>{exercise.weight} кг</span>
+                            </span>
+                          )}
+                          <span className="flex items-center space-x-1">
+                            <span className="font-medium">Подходы:</span>
+                            <span>{exercise.sets}</span>
+                          </span>
+                          <span className="flex items-center space-x-1">
+                            <span className="font-medium">Повторы:</span>
+                            <span>{exercise.reps}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             ))}

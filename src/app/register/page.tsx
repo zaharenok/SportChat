@@ -23,6 +23,7 @@ export default function RegisterPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Для консистентности
         body: JSON.stringify({ 
           name: name.trim(), 
           email: email.toLowerCase().trim() 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authUtils } from '@/lib/auth'
-import { usersDb } from '@/lib/json-db'
+import { usersDb } from '@/lib/redis-db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const session = authUtils.getSession(token)
+    const session = await authUtils.getSession(token)
     if (!session) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }

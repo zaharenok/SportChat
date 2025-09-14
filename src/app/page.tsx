@@ -7,7 +7,8 @@ import { Dashboard } from "@/components/Dashboard";
 import { DayManager } from "@/components/DayManager";
 import { LoginForm } from "@/components/LoginForm";
 import { UserProfile } from "@/components/UserProfile";
-import { Day } from "@/lib/client-api";
+import { Day, daysApi, utils } from "@/lib/client-api";
+import { Calendar, X } from "lucide-react";
 
 interface User {
   id: string
@@ -17,31 +18,41 @@ interface User {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"chat" | "dashboard">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  // availableUsers removed - no longer needed without user selection
   const [isLoading, setIsLoading] = useState(true);
+  // dayManagerCollapsed removed - no longer needed in new layout
+  const [showMobileDayManager, setShowMobileDayManager] = useState(false);
 
   // Проверка аутентификации при загрузке
   useEffect(() => {
     checkAuth()
-    loadAvailableUsers()
+    // loadAvailableUsers() removed - no longer needed
   }, [])
+
+  // Автоматическое создание и переключение на сегодняшний день
+  useEffect(() => {
+    if (currentUser) {
+      checkAndCreateTodayDay()
+    }
+  }, [currentUser]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('auth_token')
-      if (!token) {
-        setIsLoading(false)
-        return
-      }
-
-      const response = await fetch('/api/auth/me')
+      // Проверяем аутентификацию на сервере через cookies
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include' // Важно для отправки cookies
+      })
+      
       if (response.ok) {
         const userData = await response.json()
         setCurrentUser(userData)
+        // Отмечаем в localStorage, что пользователь авторизован
+        localStorage.setItem('auth_token', 'authenticated')
       } else {
+        // Очищаем localStorage при ошибке аутентификации
         localStorage.removeItem('auth_token')
       }
     } catch (error) {
@@ -52,15 +63,32 @@ export default function Home() {
     }
   }
 
-  const loadAvailableUsers = async () => {
+  // loadAvailableUsers function removed - no longer needed without user selection
+
+  const checkAndCreateTodayDay = async () => {
+    if (!currentUser) return
+    
     try {
-      const response = await fetch('/api/users')
-      if (response.ok) {
-        const users = await response.json()
-        setAvailableUsers(users)
+      const today = utils.getCurrentDate()
+      console.log('Checking for today\'s day:', today)
+      
+      // Проверяем, существует ли день для сегодняшней даты
+      const existingDay = await daysApi.getByDate(currentUser.id, today)
+      
+      if (existingDay) {
+        // Если день существует, но не выбран, переключаемся на него
+        if (!selectedDay || selectedDay.date !== today) {
+          console.log('Switching to today\'s day:', existingDay)
+          setSelectedDay(existingDay)
+        }
+      } else {
+        // Если дня не существует, создаем новый
+        console.log('Creating new day for today:', today)
+        const newDay = await daysApi.create(currentUser.id, today)
+        setSelectedDay(newDay)
       }
     } catch (error) {
-      console.error('Failed to load users:', error)
+      console.error('Error checking/creating today day:', error)
     }
   }
 
@@ -69,9 +97,21 @@ export default function Home() {
     setSelectedDay(null)
   }
 
-  const handleLogout = () => {
-    setCurrentUser(null)
-    setSelectedDay(null)
+  const handleLogout = async () => {
+    try {
+      // Удаляем сессию на сервере
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      // Очищаем локальное состояние
+      localStorage.removeItem('auth_token')
+      setCurrentUser(null)
+      setSelectedDay(null)
+    }
   }
 
   const handleUserUpdate = (updatedUser: User) => {
@@ -93,8 +133,7 @@ export default function Home() {
   if (!currentUser) {
     return (
       <LoginForm 
-        onLogin={handleLogin} 
-        availableUsers={availableUsers}
+        onLogin={handleLogin}
       />
     )
   }
@@ -104,39 +143,78 @@ export default function Home() {
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
       
       <main className="max-w-7xl mx-auto p-4 pb-8">
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 h-[calc(100vh-140px)]">
-          {/* Профиль пользователя */}
-          <div className="xl:col-span-1">
-            <div className="space-y-4">
-              <UserProfile 
-                user={currentUser}
-                onUserUpdate={handleUserUpdate}
-                onLogout={handleLogout}
-              />
-              
+        {activeTab === "profile" ? (
+          /* Полноэкранный профиль */
+          <div className="max-w-2xl mx-auto">
+            <UserProfile 
+              user={currentUser}
+              onUserUpdate={handleUserUpdate}
+              onLogout={handleLogout}
+            />
+          </div>
+        ) : activeTab === "history" ? (
+          /* Полноэкранная история дней */
+          <div className="max-w-4xl mx-auto">
+            <DayManager 
+              selectedDay={selectedDay}
+              selectedUser={currentUser}
+              onDaySelect={setSelectedDay}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:gap-6 h-[calc(100vh-140px)]">
+            {/* Основной контент занимает всю ширину */}
+            <div className="w-full">
+              {activeTab === "chat" ? (
+                <Chat 
+                  selectedDay={selectedDay} 
+                  selectedUser={currentUser}
+                />
+              ) : (
+                <Dashboard 
+                  selectedDay={selectedDay}
+                  selectedUser={currentUser}
+                />
+              )}
+            </div>
+            
+            {/* Мобильная панель управления днями */}
+            <div className="sm:hidden fixed bottom-4 right-4 z-50">
+              <button
+                onClick={() => setShowMobileDayManager(true)}
+                className="w-14 h-14 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-colors flex items-center justify-center"
+                title="Управление днями"
+              >
+                <Calendar className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Мобильный оверлей для управления днями */}
+        {showMobileDayManager && (
+          <div className="sm:hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-end">
+            <div className="w-full bg-white rounded-t-xl p-4 max-h-[80vh] overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Управление днями</h2>
+                <button
+                  onClick={() => setShowMobileDayManager(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
               <DayManager 
                 selectedDay={selectedDay}
                 selectedUser={currentUser}
-                onDaySelect={setSelectedDay}
+                onDaySelect={(day) => {
+                  setSelectedDay(day);
+                  setShowMobileDayManager(false);
+                }}
               />
             </div>
           </div>
-          
-          {/* Основной контент */}
-          <div className="xl:col-span-4">
-            {activeTab === "chat" ? (
-              <Chat 
-                selectedDay={selectedDay} 
-                selectedUser={currentUser}
-              />
-            ) : (
-              <Dashboard 
-                selectedDay={selectedDay}
-                selectedUser={currentUser}
-              />
-            )}
-          </div>
-        </div>
+        )}
       </main>
     </div>
   );

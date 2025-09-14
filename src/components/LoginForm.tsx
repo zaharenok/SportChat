@@ -13,14 +13,16 @@ interface AuthUser {
 
 interface LoginFormProps {
   onLogin: (user: AuthUser) => void
-  availableUsers: Array<{ id: string; name: string; email: string }>
+  // availableUsers functionality removed as requested
+  availableUsers?: Array<{ id: string; name: string; email: string }>
 }
 
-export function LoginForm({ onLogin, availableUsers }: LoginFormProps) {
+export function LoginForm({ onLogin }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showUserList, setShowUserList] = useState(false)
+  // Commented out user selection - removed as requested
+  // const [showUserList, setShowUserList] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +35,7 @@ export function LoginForm({ onLogin, availableUsers }: LoginFormProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Важно для получения cookies
         body: JSON.stringify({ email: email.toLowerCase() }),
       })
 
@@ -55,10 +58,11 @@ export function LoginForm({ onLogin, availableUsers }: LoginFormProps) {
     }
   }
 
-  const handleUserSelect = (userEmail: string) => {
-    setEmail(userEmail)
-    setShowUserList(false)
-  }
+  // Removed user selection functionality
+  // const handleUserSelect = (userEmail: string) => {
+  //   setEmail(userEmail)
+  //   setShowUserList(false)
+  // }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
@@ -92,7 +96,8 @@ export function LoginForm({ onLogin, availableUsers }: LoginFormProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setShowUserList(true)}
+                // User selection removed
+                // onFocus={() => setShowUserList(true)}
                 placeholder="user@example.com"
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
                 required
@@ -129,35 +134,7 @@ export function LoginForm({ onLogin, availableUsers }: LoginFormProps) {
           </button>
         </form>
 
-        {/* Список доступных пользователей */}
-        <AnimatePresence>
-          {showUserList && availableUsers.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-6"
-            >
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm font-medium text-gray-700 mb-3">
-                  Доступные пользователи:
-                </p>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {availableUsers.map((user) => (
-                    <button
-                      key={user.id}
-                      onClick={() => handleUserSelect(user.email)}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-primary-50 hover:border-primary-300 transition-colors"
-                    >
-                      <p className="font-medium text-gray-900">{user.name}</p>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* User selection list removed as requested */}
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">

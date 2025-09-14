@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authUtils } from '@/lib/auth'
-import { usersDb, fileDb } from '@/lib/json-db'
+import { usersDb } from '@/lib/redis-db'
 
 export async function PUT(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const session = authUtils.getSession(token)
+    const session = await authUtils.getSession(token)
     if (!session) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
@@ -21,26 +21,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 })
     }
 
-    // Получаем всех пользователей
-    const users = await usersDb.getAll()
-    
-    // Проверяем, что email не занят другим пользователем
-    const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.id !== session.userId)
-    if (existingUser) {
-      return NextResponse.json({ error: 'Email already taken' }, { status: 409 })
-    }
-
-    // Обновляем пользователя
-    const updatedUsers = users.map(user => 
-      user.id === session.userId 
-        ? { ...user, name, email, updated_at: new Date().toISOString() }
-        : user
-    )
-
-    await fileDb.writeFile('users.json', updatedUsers)
-
-    // Возвращаем обновленные данные
-    const updatedUser = updatedUsers.find(u => u.id === session.userId)!
+    // Обновляем пользователя через Redis
+    const updatedUser = await usersDb.update(session.userId, name, email)
     
     return NextResponse.json({
       id: updatedUser.id,

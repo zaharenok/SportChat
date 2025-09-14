@@ -1,11 +1,11 @@
 "use client";
 
-import { MessageCircle, BarChart3 } from "lucide-react";
+import { MessageCircle, BarChart3, User, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavigationProps {
-  activeTab: "chat" | "dashboard";
-  onTabChange: (tab: "chat" | "dashboard") => void;
+  activeTab: "chat" | "dashboard" | "profile" | "history";
+  onTabChange: (tab: "chat" | "dashboard" | "profile" | "history") => void;
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
@@ -46,6 +46,30 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           >
             <BarChart3 className="w-4 h-4" />
             <span>Дашборд</span>
+          </button>
+          <button
+            onClick={() => onTabChange("profile")}
+            className={cn(
+              "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+              activeTab === "profile"
+                ? "bg-white text-primary-700 shadow-sm"
+                : "text-primary-600 hover:text-primary-800"
+            )}
+          >
+            <User className="w-4 h-4" />
+            <span>Профиль</span>
+          </button>
+          <button
+            onClick={() => onTabChange("history")}
+            className={cn(
+              "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+              activeTab === "history"
+                ? "bg-white text-primary-700 shadow-sm"
+                : "text-primary-600 hover:text-primary-800"
+            )}
+          >
+            <History className="w-4 h-4" />
+            <span>История</span>
           </button>
         </div>
       </div>

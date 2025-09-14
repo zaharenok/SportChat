@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
+import { chatApi, workoutsApi, Day, User, ChatMessage, Exercise } from "@/lib/client-api";
 
 interface Message {
   id: string;
@@ -16,7 +16,7 @@ interface ChatResponse {
   output: {
     message: string;
     workout_logged: boolean;
-    parsed_exercises: string[];
+    parsed_exercises: Exercise[];
     suggestions: string[];
     next_workout_recommendation: string;
   };
@@ -50,9 +50,23 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
       
       if (chatMessages.length === 0) {
         // Если нет сообщений для этого дня, добавляем приветственное
+        const dayDate = new Date(selectedDay.date + 'T00:00:00');
+        const today = new Date();
+        const isToday = selectedDay.date === today.toISOString().split('T')[0];
+        
+        const dayOfWeek = dayDate.toLocaleDateString('ru-RU', { weekday: 'long' });
+        const dayMonth = dayDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        
+        let welcomeText;
+        if (isToday) {
+          welcomeText = `Привет! 🌟 Сегодня ${dayOfWeek}, ${dayMonth}. Будет ли сегодня тренировка? Расскажи, что планируешь делать!`;
+        } else {
+          welcomeText = `Привет! 💪 Это ${dayOfWeek}, ${dayMonth}. Расскажи, как прошла тренировка или что планировал в этот день?`;
+        }
+        
         const welcomeMessage = {
           id: "welcome",
-          text: `Привет! 💪 Это чат для ${new Date(selectedDay.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}. Расскажи, как прошла тренировка или что планируешь делать?`,
+          text: welcomeText,
           isUser: false,
           timestamp: new Date(),
         };
@@ -133,7 +147,7 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
     try {
       console.log("Sending message to webhook:", messageText);
       
-      const response = await fetch("https://n8n.aaagency.at/webhook/ca45977e-cf5b-4b7b-a471-3a55da6bf356", {
+      const response = await fetch("/api/webhook", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,6 +155,8 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
         },
         body: JSON.stringify({
           message: messageText,
+          user_email: selectedUser.email,
+          user_name: selectedUser.name,
         }),
       });
 
@@ -158,11 +174,29 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
         console.log("Extracted output:", output);
         console.log("Message:", output.message);
         console.log("Suggestions:", output.suggestions);
+        console.log("Parsed exercises:", output.parsed_exercises);
+        console.log("Workout logged:", output.workout_logged);
         
         // Основное сообщение сразу (через 1 секунду после загрузки)
         if (output.message) {
           console.log("Adding main message with delay");
           addMessageWithDelay(output.message, 1000);
+        }
+
+        // Сохраняем тренировку если она была распознана
+        if (output.workout_logged && output.parsed_exercises && output.parsed_exercises.length > 0) {
+          console.log("Saving workout data:", output.parsed_exercises);
+          try {
+            await workoutsApi.create(
+              selectedUser.id,
+              selectedDay.id,
+              userMessage.id, // связываем с сообщением пользователя
+              output.parsed_exercises
+            );
+            console.log("Workout saved successfully");
+          } catch (error) {
+            console.error("Error saving workout:", error);
+          }
         }
         
         // Рекомендации через 5 секунд после основного сообщения (если есть)

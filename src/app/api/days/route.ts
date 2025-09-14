@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { daysDb } from '@/lib/json-db'
+import { daysDb } from '@/lib/redis-db'
 
 export async function GET(request: NextRequest) {
   try {

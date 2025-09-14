@@ -1,5 +1,6 @@
 // Простая система аутентификации
-import { usersDb } from './json-db'
+import { usersDb } from './redis-db'
+import { redis } from './redis'
 
 export interface AuthSession {
   userId: string
@@ -8,8 +9,8 @@ export interface AuthSession {
   expiresAt: number
 }
 
-// Простое хранение сессий в памяти (в продакшене использовать Redis/база данных)
-const sessions = new Map<string, AuthSession>()
+// Хранение сессий в Redis для serverless окружения
+const SESSIONS_PREFIX = 'session:'
 
 // Утилиты для работы с сессиями
 export const authUtils = {
@@ -24,46 +25,56 @@ export const authUtils = {
     const token = authUtils.generateSessionToken()
     const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 дней
 
-    sessions.set(token, {
+    const session: AuthSession = {
       userId: user.id,
       email: user.email,
       name: user.name,
       expiresAt
-    })
+    }
+
+    // Сохраняем сессию в Redis с TTL 7 дней
+    await redis.setex(`${SESSIONS_PREFIX}${token}`, 7 * 24 * 60 * 60, JSON.stringify(session))
 
     return token
   },
 
-  getSession: (token: string): AuthSession | null => {
-    const session = sessions.get(token)
-    if (!session) return null
+  getSession: async (token: string): Promise<AuthSession | null> => {
+    try {
+      const sessionData = await redis.get(`${SESSIONS_PREFIX}${token}`)
+      if (!sessionData) return null
 
-    // Проверяем, не истекла ли сессия
-    if (Date.now() > session.expiresAt) {
-      sessions.delete(token)
+      const session: AuthSession = JSON.parse(sessionData as string)
+      
+      // Проверяем, не истекла ли сессия
+      if (Date.now() > session.expiresAt) {
+        await redis.del(`${SESSIONS_PREFIX}${token}`)
+        return null
+      }
+
+      return session
+    } catch (error) {
+      console.error('Error getting session:', error)
       return null
     }
-
-    return session
   },
 
-  deleteSession: (token: string): void => {
-    sessions.delete(token)
-  },
-
-  // Очистка истекших сессий
-  cleanupExpiredSessions: () => {
-    const now = Date.now()
-    for (const [token, session] of sessions.entries()) {
-      if (now > session.expiresAt) {
-        sessions.delete(token)
-      }
+  deleteSession: async (token: string): Promise<void> => {
+    try {
+      await redis.del(`${SESSIONS_PREFIX}${token}`)
+    } catch (error) {
+      console.error('Error deleting session:', error)
     }
+  },
+
+  // Очистка истекших сессий (Redis автоматически удаляет с TTL)
+  cleanupExpiredSessions: async () => {
+    // Redis автоматически удалит ключи с истекшим TTL
+    // Эта функция оставлена для совместимости
   }
 }
 
-// Запускаем очистку каждый час
-setInterval(authUtils.cleanupExpiredSessions, 60 * 60 * 1000)
+// В serverless окружении не используем setInterval
+// Redis автоматически удаляет ключи с истекшим TTL
 
 // Client-side утилиты
 export const clientAuth = {
