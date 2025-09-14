@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Clock, Flame, Trash2 } from "lucide-react";
+import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Clock, Flame, Trash2, Plus, Edit, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, Workout } from "@/lib/client-api";
@@ -24,6 +24,8 @@ export function Dashboard({ selectedUser }: DashboardProps) {
     show: false, 
     workoutId: null 
   });
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   // Collapsible widgets state - reserved for future implementation
   // const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(new Set());
 
@@ -77,6 +79,43 @@ export function Dashboard({ selectedUser }: DashboardProps) {
 
   const cancelDeleteWorkout = () => {
     setDeleteConfirmation({ show: false, workoutId: null });
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setShowGoalForm(true);
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+      await goalsApi.delete(goalId);
+      setGoals(goals.filter(goal => goal.id !== goalId));
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+    }
+  };
+
+  const handleGoalSubmit = async (goalData: any) => {
+    try {
+      if (editingGoal) {
+        // Обновление существующей цели
+        const updatedGoal = await goalsApi.update(editingGoal.id, goalData);
+        setGoals(goals.map(goal => goal.id === editingGoal.id ? updatedGoal : goal));
+      } else {
+        // Создание новой цели
+        const newGoal = await goalsApi.create(selectedUser.id, goalData);
+        setGoals([...goals, newGoal]);
+      }
+      setShowGoalForm(false);
+      setEditingGoal(null);
+    } catch (error) {
+      console.error('Error saving goal:', error);
+    }
+  };
+
+  const handleGoalFormClose = () => {
+    setShowGoalForm(false);
+    setEditingGoal(null);
   };
 
   // Вычисляем динамическую статистику на основе реальных данных
@@ -317,30 +356,68 @@ export function Dashboard({ selectedUser }: DashboardProps) {
           animate={{ opacity: 1, x: 0 }}
           className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
         >
-          <div className="flex items-center space-x-2 mb-6">
-            <Target className="w-5 h-5 text-primary-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Цели</h3>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              <Target className="w-5 h-5 text-primary-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Цели</h3>
+            </div>
+            <button
+              onClick={() => setShowGoalForm(true)}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Добавить</span>
+            </button>
           </div>
           
           <div className="space-y-4">
-            {goals.map((goal) => (
-              <div key={goal.id} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium text-gray-700">{goal.title}</p>
-                  <p className="text-sm text-gray-500">
-                    {goal.current}/{goal.target} {goal.unit}
-                  </p>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${goal.progress}%` }}
-                    transition={{ duration: 1, delay: 0.2 }}
-                    className="bg-primary-600 h-2 rounded-full"
-                  />
-                </div>
+            {goals.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">Нет целей</p>
+                <p className="text-xs">Нажмите "Добавить", чтобы создать первую цель</p>
               </div>
-            ))}
+            ) : (
+              goals.map((goal) => (
+                <div key={goal.id} className="group space-y-2 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium text-gray-700">{goal.title}</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-gray-500">
+                        {goal.current_value}/{goal.target_value} {goal.unit}
+                      </p>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
+                        <button
+                          onClick={() => handleEditGoal(goal)}
+                          className="p-1 hover:bg-blue-100 rounded text-blue-600"
+                          title="Редактировать"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGoal(goal.id)}
+                          className="p-1 hover:bg-red-100 rounded text-red-600"
+                          title="Удалить"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min((goal.current_value / goal.target_value) * 100, 100)}%` }}
+                      transition={{ duration: 1, delay: 0.2 }}
+                      className="bg-primary-600 h-2 rounded-full"
+                    />
+                  </div>
+                  {goal.description && (
+                    <p className="text-xs text-gray-500">{goal.description}</p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </motion.div>
       </div>
@@ -499,6 +576,200 @@ export function Dashboard({ selectedUser }: DashboardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Форма целей */}
+      <AnimatePresence>
+        {showGoalForm && (
+          <GoalFormModal
+            goal={editingGoal}
+            onSubmit={handleGoalSubmit}
+            onClose={handleGoalFormClose}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// Компонент формы для целей
+interface GoalFormModalProps {
+  goal?: Goal | null;
+  onSubmit: (goalData: any) => void;
+  onClose: () => void;
+}
+
+function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
+  const [formData, setFormData] = useState({
+    title: goal?.title || '',
+    description: goal?.description || '',
+    targetValue: goal?.target_value || '',
+    currentValue: goal?.current_value || '',
+    unit: goal?.unit || '',
+    category: goal?.category || 'fitness',
+    dueDate: goal?.due_date || ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      title: formData.title,
+      description: formData.description,
+      targetValue: Number(formData.targetValue),
+      currentValue: Number(formData.currentValue),
+      unit: formData.unit,
+      category: formData.category,
+      dueDate: formData.dueDate || undefined
+    });
+  };
+
+  const categories = [
+    { value: 'fitness', label: 'Фитнес' },
+    { value: 'strength', label: 'Сила' },
+    { value: 'cardio', label: 'Кардио' },
+    { value: 'flexibility', label: 'Гибкость' },
+    { value: 'weight', label: 'Вес' },
+    { value: 'other', label: 'Другое' }
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-xl p-6 max-w-md w-full mx-auto shadow-xl max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {goal ? 'Редактировать цель' : 'Новая цель'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Название *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+              placeholder="Например: Подтянуться 50 раз"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Описание
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+              placeholder="Описание цели..."
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Цель *
+              </label>
+              <input
+                type="number"
+                value={formData.targetValue}
+                onChange={(e) => setFormData({ ...formData, targetValue: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                placeholder="100"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Текущий прогресс
+              </label>
+              <input
+                type="number"
+                value={formData.currentValue}
+                onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Единица измерения
+              </label>
+              <input
+                type="text"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                placeholder="раз, кг, км..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Категория
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+              >
+                {categories.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Срок выполнения
+            </label>
+            <input
+              type="date"
+              value={formData.dueDate}
+              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex items-center space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+            >
+              {goal ? 'Сохранить' : 'Создать'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }

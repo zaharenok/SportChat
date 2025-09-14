@@ -17,3 +17,71 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch goals' }, { status: 500 })
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const { userId, title, description, targetValue, currentValue = 0, unit, category = 'fitness', dueDate } = await request.json()
+    
+    if (!userId || !title || !targetValue) {
+      return NextResponse.json({ 
+        error: 'userId, title, and targetValue are required' 
+      }, { status: 400 })
+    }
+
+    const newGoal = await goalsDb.create(userId, {
+      title,
+      description,
+      targetValue,
+      currentValue,
+      unit,
+      category,
+      dueDate
+    })
+    return NextResponse.json(newGoal, { status: 201 })
+  } catch (error) {
+    console.error('Error creating goal:', error)
+    return NextResponse.json({ error: 'Failed to create goal' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { goalId, title, description, targetValue, currentValue, unit, category, dueDate, isCompleted } = await request.json()
+    
+    if (!goalId) {
+      return NextResponse.json({ error: 'goalId is required' }, { status: 400 })
+    }
+
+    const updatedGoal = await goalsDb.update(goalId, {
+      title,
+      description,
+      targetValue,
+      currentValue,
+      unit,
+      category,
+      dueDate,
+      isCompleted
+    })
+    return NextResponse.json(updatedGoal)
+  } catch (error) {
+    console.error('Error updating goal:', error)
+    return NextResponse.json({ error: 'Failed to update goal' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const goalId = searchParams.get('goalId')
+    
+    if (!goalId) {
+      return NextResponse.json({ error: 'goalId is required' }, { status: 400 })
+    }
+
+    await goalsDb.delete(goalId)
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting goal:', error)
+    return NextResponse.json({ error: 'Failed to delete goal' }, { status: 500 })
+  }
+}

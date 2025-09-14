@@ -185,18 +185,28 @@ export function Chat({ selectedDay, selectedUser }: ChatProps) {
 
         // Сохраняем тренировку если она была распознана
         if (output.workout_logged && output.parsed_exercises && output.parsed_exercises.length > 0) {
-          console.log("Saving workout data:", output.parsed_exercises);
+          console.log("🏋️ Saving workout data:", {
+            userId: selectedUser.id,
+            dayId: selectedDay.id,
+            chatMessageId: userMessage.id,
+            exercises: output.parsed_exercises
+          });
           try {
-            await workoutsApi.create(
+            const savedWorkout = await workoutsApi.create(
               selectedUser.id,
               selectedDay.id,
               userMessage.id, // связываем с сообщением пользователя
               output.parsed_exercises
             );
-            console.log("Workout saved successfully");
+            console.log("✅ Workout saved successfully:", savedWorkout);
           } catch (error) {
-            console.error("Error saving workout:", error);
+            console.error("❌ Error saving workout:", error);
           }
+        } else {
+          console.log("ℹ️ No workout to save:", {
+            workout_logged: output.workout_logged,
+            parsed_exercises: output.parsed_exercises
+          });
         }
         
         // Рекомендации через 5 секунд после основного сообщения (если есть)

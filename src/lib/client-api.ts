@@ -135,17 +135,23 @@ export const workoutsApi = {
   },
 
   async create(userId: string, dayId: string, chatMessageId: string, exercises: Exercise[]) {
+    console.log('Creating workout:', { userId, dayId, chatMessageId, exercises })
     const response = await fetch('/api/workouts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ userId, dayId, chatMessageId, exercises }),
     })
     if (!response.ok) {
-      throw new Error('Failed to create workout')
+      const errorText = await response.text()
+      console.error('Workout creation failed:', response.status, errorText)
+      throw new Error(`Failed to create workout: ${response.status} ${errorText}`)
     }
-    return response.json()
+    const result = await response.json()
+    console.log('Workout created successfully:', result)
+    return result
   },
 
   async delete(workoutId: string) {
@@ -162,9 +168,69 @@ export const workoutsApi = {
 // API для целей
 export const goalsApi = {
   async getAll(userId: string) {
-    const response = await fetch(`/api/goals?userId=${userId}`)
+    const response = await fetch(`/api/goals?userId=${userId}`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error('Failed to fetch goals')
+    }
+    return response.json()
+  },
+
+  async create(userId: string, goalData: {
+    title: string
+    description?: string
+    targetValue: number
+    currentValue?: number
+    unit?: string
+    category?: string
+    dueDate?: string
+  }) {
+    const response = await fetch('/api/goals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ userId, ...goalData }),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to create goal')
+    }
+    return response.json()
+  },
+
+  async update(goalId: string, updates: {
+    title?: string
+    description?: string
+    targetValue?: number
+    currentValue?: number
+    unit?: string
+    category?: string
+    dueDate?: string
+    isCompleted?: boolean
+  }) {
+    const response = await fetch('/api/goals', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ goalId, ...updates }),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update goal')
+    }
+    return response.json()
+  },
+
+  async delete(goalId: string) {
+    const response = await fetch(`/api/goals?goalId=${goalId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+    if (!response.ok) {
+      throw new Error('Failed to delete goal')
     }
     return response.json()
   }

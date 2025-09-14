@@ -305,6 +305,80 @@ export const goalsDb = {
   async getByUser(userId: string): Promise<Goal[]> {
     const goals = await redisDb.readArray<Goal>('goals')
     return goals.filter(goal => goal.user_id === userId)
+  },
+
+  async create(userId: string, goalData: {
+    title: string
+    description?: string
+    targetValue: number
+    currentValue?: number
+    unit?: string
+    category?: string
+    dueDate?: string
+  }): Promise<Goal> {
+    const goal: Goal = {
+      id: generateId('goal'),
+      user_id: userId,
+      title: goalData.title,
+      description: goalData.description || '',
+      target_value: goalData.targetValue,
+      current_value: goalData.currentValue || 0,
+      unit: goalData.unit || '',
+      category: goalData.category || 'fitness',
+      created_at: new Date().toISOString(),
+      due_date: goalData.dueDate,
+      is_completed: false
+    }
+    
+    const goals = await redisDb.readArray<Goal>('goals')
+    goals.push(goal)
+    await redisDb.writeArray('goals', goals)
+    return goal
+  },
+
+  async update(goalId: string, updates: Partial<{
+    title: string
+    description: string
+    targetValue: number
+    currentValue: number
+    unit: string
+    category: string
+    dueDate: string
+    isCompleted: boolean
+  }>): Promise<Goal> {
+    const goals = await redisDb.readArray<Goal>('goals')
+    const goalIndex = goals.findIndex(g => g.id === goalId)
+    
+    if (goalIndex === -1) {
+      throw new Error('Goal not found')
+    }
+    
+    const goal = goals[goalIndex]
+    if (updates.title !== undefined) goal.title = updates.title
+    if (updates.description !== undefined) goal.description = updates.description
+    if (updates.targetValue !== undefined) goal.target_value = updates.targetValue
+    if (updates.currentValue !== undefined) goal.current_value = updates.currentValue
+    if (updates.unit !== undefined) goal.unit = updates.unit
+    if (updates.category !== undefined) goal.category = updates.category
+    if (updates.dueDate !== undefined) goal.due_date = updates.dueDate
+    if (updates.isCompleted !== undefined) goal.is_completed = updates.isCompleted
+    
+    goal.updated_at = new Date().toISOString()
+    
+    goals[goalIndex] = goal
+    await redisDb.writeArray('goals', goals)
+    return goal
+  },
+
+  async delete(goalId: string): Promise<void> {
+    const goals = await redisDb.readArray<Goal>('goals')
+    const filteredGoals = goals.filter(g => g.id !== goalId)
+    
+    if (filteredGoals.length === goals.length) {
+      throw new Error('Goal not found')
+    }
+    
+    await redisDb.writeArray('goals', filteredGoals)
   }
 }
 

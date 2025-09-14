@@ -1,19 +1,19 @@
-# 🏋️ SportChat - Твой спортивный помощник
+# 🏋️ SportChat - Your AI Fitness Companion
 
-Умное приложение для отслеживания тренировок и получения персональных советов с интеграцией ИИ.
+Smart fitness tracking application with AI integration for personalized workout advice and motivation.
 
-*Smart fitness tracking application with AI integration for personalized workout advice.*
+*Умное приложение для отслеживания тренировок и получения персональных советов с интеграцией ИИ.*
 
-## 🚀 Возможности
+## 🚀 Features
 
-- **📅 Управление тренировочными днями** - создание и отслеживание дней тренировок
-- **💬 ИИ чат-помощник** - персональные советы и мотивация 
-- **📊 Дашборд с аналитикой** - визуализация прогресса и статистики
-- **🎯 Цели и достижения** - постановка целей и отслеживание результатов
-- **👤 Профиль пользователя** - управление личными данными
-- **🔐 Безопасная аутентификация** - система входа на основе cookies
+- **📅 Workout Day Management** - Create and track training days
+- **💬 AI Chat Assistant** - Personalized advice and motivation 
+- **📊 Analytics Dashboard** - Progress visualization and statistics
+- **🎯 Goals & Achievements** - Set goals and track results
+- **👤 User Profile** - Personal data management
+- **🔐 Secure Authentication** - Cookie-based login system
 
-## 🛠️ Технологии
+## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
 - **Animations**: Framer Motion
@@ -24,16 +24,16 @@
 - **Charts**: Recharts
 - **Icons**: Lucide React
 
-## 📋 Требования
+## 📋 Requirements
 
 - Node.js 18+ 
-- npm или yarn
-- Redis database (Upstash рекомендуется)
-- N8N для ИИ интеграции (опционально)
+- npm or yarn
+- Redis database (Upstash recommended)
+- N8N for AI integration (optional)
 
-## ⚡ Быстрый старт
+## ⚡ Quick Start
 
-### 1. Клонирование и установка
+### 1. Clone and Install
 
 ```bash
 git clone <your-repo-url>
@@ -41,99 +41,99 @@ cd sportchat
 npm install
 ```
 
-### 2. Настройка переменных окружения
+### 2. Environment Setup
 
 ```bash
 cp .env.example .env
 ```
 
-Заполните `.env` файл:
+Fill in the `.env` file:
 
 ```env
-# Обязательные переменные
+# Required variables
 KV_REST_API_URL=https://your-redis.upstash.io
 KV_REST_API_TOKEN=your-redis-token
 WEBHOOK_URL=https://your-n8n.com/webhook/your-id
 
-# Опциональные
+# Optional
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-key
 ```
 
-### 3. Запуск разработки
+### 3. Run Development Server
 
 ```bash
 npm run dev
 ```
 
-Откройте [http://localhost:3000](http://localhost:3000) в браузере.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 🗄️ База данных
+## 🗄️ Database
 
-Приложение использует **Redis** через Upstash для:
+The application uses **Redis** via Upstash for:
 
-- Пользователи и аутентификация
-- Тренировочные дни и данные
-- Сообщения чата
-- Цели и достижения
-- Сессии пользователей (TTL 7 дней)
+- Users and authentication
+- Training days and data
+- Chat messages
+- Goals and achievements
+- User sessions (TTL 7 days)
 
-### Настройка Redis (Upstash)
+### Redis Setup (Upstash)
 
-1. Создайте базу на [upstash.com](https://upstash.com)
-2. Скопируйте **REST API URL** и **Token**
-3. Добавьте в переменные окружения
+1. Create database at [upstash.com](https://upstash.com)
+2. Copy **REST API URL** and **Token**
+3. Add to environment variables
 
-## 🔧 Скрипты
+## 🔧 Scripts
 
 ```bash
-npm run dev          # Запуск dev сервера
-npm run build        # Сборка для продакшена  
-npm start            # Запуск production сервера
-npm run lint         # Проверка кода ESLint
-npm run type-check   # Проверка TypeScript типов
+npm run dev          # Start development server
+npm run build        # Build for production  
+npm start            # Start production server
+npm run lint         # Run ESLint code check
+npm run type-check   # Run TypeScript type check
 ```
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 sportchat/
 ├── src/
 │   ├── app/                 # Next.js App Router
 │   │   ├── api/            # API routes
-│   │   ├── register/       # Страница регистрации
+│   │   ├── register/       # Registration page
 │   │   ├── layout.tsx      # Root layout
-│   │   └── page.tsx        # Главная страница
-│   ├── components/         # React компоненты
-│   │   ├── Chat.tsx       # ИИ чат
-│   │   ├── Dashboard.tsx  # Аналитика
-│   │   ├── DayManager.tsx # Управление днями
+│   │   └── page.tsx        # Main page
+│   ├── components/         # React components
+│   │   ├── Chat.tsx       # AI chat
+│   │   ├── Dashboard.tsx  # Analytics
+│   │   ├── DayManager.tsx # Day management
 │   │   └── ...
-│   └── lib/               # Утилиты и API
-│       ├── redis-db.ts   # Redis адаптер
-│       ├── auth.ts       # Аутентификация
+│   └── lib/               # Utilities and API
+│       ├── redis-db.ts   # Redis adapter
+│       ├── auth.ts       # Authentication
 │       └── client-api.ts # Client-side API
-├── public/                # Статические файлы
-├── .env.example          # Шаблон переменных
-├── SECURITY.md          # Инструкции по безопасности
-└── README.md           # Этот файл
+├── public/                # Static files
+├── .env.example          # Environment template
+├── SECURITY.md          # Security instructions
+└── README.md           # This file
 ```
 
-## 🚀 Деплой на Vercel
+## 🚀 Deploy on Vercel
 
-### 1. Подготовка
+### 1. Preparation
 
 ```bash
-npm run build  # Проверка сборки
+npm run build  # Check build
 ```
 
-### 2. Настройка Vercel
+### 2. Vercel Setup
 
-1. Подключите репозиторий к Vercel
-2. В **Project Settings → Environment Variables** добавьте все переменные из `.env`
-3. Отметьте чувствительные переменные как **Sensitive**
+1. Connect your repository to Vercel
+2. In **Project Settings → Environment Variables** add all variables from `.env`
+3. Mark sensitive variables as **Sensitive**
 
-### 3. Переменные окружения в Vercel
+### 3. Environment Variables in Vercel
 
 ```env
 KV_REST_API_URL          (Sensitive) ✅
@@ -144,28 +144,28 @@ NEXT_PUBLIC_WEBHOOK_URL  (Public)
 
 ### 4. Deploy
 
-Vercel автоматически деплоит при push в main ветку.
+Vercel automatically deploys on push to main branch.
 
-## 🔐 Безопасность
+## 🔐 Security
 
-- ✅ Все чувствительные данные в переменных окружения
-- ✅ `.env` исключен из git
-- ✅ Cookie-based аутентификация с httpOnly
-- ✅ Redis сессии с автоматическим TTL
-- ✅ Валидация всех пользовательских данных
+- ✅ All sensitive data in environment variables
+- ✅ `.env` excluded from git
+- ✅ Cookie-based authentication with httpOnly
+- ✅ Redis sessions with automatic TTL
+- ✅ All user data validation
 
-См. [SECURITY.md](./SECURITY.md) для деталей.
+See [SECURITY.md](./SECURITY.md) for details.
 
-## 🤖 ИИ Интеграция
+## 🤖 AI Integration
 
 ### N8N Webhook
 
-1. Настройте N8N workflow с HTTP webhook
-2. Добавьте обработку запросов от SportChat
-3. Интегрируйте с вашим ИИ сервисом (OpenAI, Claude, etc.)
-4. URL webhook добавьте в `WEBHOOK_URL`
+1. Set up N8N workflow with HTTP webhook
+2. Add request processing from SportChat
+3. Integrate with your AI service (OpenAI, Claude, etc.)
+4. Add webhook URL to `WEBHOOK_URL`
 
-### Пример N8N workflow
+### N8N Workflow Example
 
 ```json
 {
@@ -178,39 +178,39 @@ Vercel автоматически деплоит при push в main ветку.
 }
 ```
 
-## 🤝 Разработка
+## 🤝 Development
 
-### Добавление новых функций
+### Adding New Features
 
-1. Создайте feature branch
-2. Добавьте компоненты в `src/components/`
-3. API routes в `src/app/api/`
-4. Обновите типы в `src/lib/`
-5. Создайте PR с описанием
+1. Create feature branch
+2. Add components to `src/components/`
+3. Add API routes to `src/app/api/`
+4. Update types in `src/lib/`
+5. Create PR with description
 
 ### Code Style
 
 - TypeScript strict mode
 - ESLint + Prettier
-- Компоненты с TypeScript interfaces
-- Async/await для асинхронных операций
+- Components with TypeScript interfaces
+- Async/await for asynchronous operations
 
-## 📞 Поддержка
+## 📞 Support
 
-Если возникли вопросы:
+If you have questions:
 
-1. Проверьте [SECURITY.md](./SECURITY.md) для проблем с деплоем
-2. Посмотрите логи в Vercel Functions
-3. Проверьте переменные окружения
-4. Откройте Issue в репозитории
+1. Check [SECURITY.md](./SECURITY.md) for deployment issues
+2. Check logs in Vercel Functions
+3. Verify environment variables
+4. Open Issue in repository
 
-## 📄 Лицензия
+## 📄 License
 
-MIT License - можете использовать для любых целей.
+MIT License - feel free to use for any purpose.
 
 ---
 
-**Создано с ❤️ для спортивного сообщества**
+**Built with ❤️ for the fitness community**
 
 🚀 **GitHub**: https://github.com/zaharenok  
-💪 **Начните тренироваться с ИИ уже сегодня!**
+💪 **Start training with AI today!**
