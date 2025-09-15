@@ -132,7 +132,7 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-primary-200">
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-primary-200">
         <div className="flex items-center justify-center py-8">
           <div className="text-primary-600">Загрузка дней...</div>
         </div>
@@ -141,11 +141,11 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-primary-200">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-primary-200">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center space-x-2">
           <Calendar className="w-5 h-5 text-primary-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Управление днями</h3>
+          <h3 className="text-sm sm:text-lg font-semibold text-gray-900">Управление днями</h3>
           <button
             onClick={toggleCollapse}
             className="p-1 text-gray-400 hover:text-gray-600 transition-colors"

@@ -100,21 +100,21 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-primary-200">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
+    <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-primary-200">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="flex items-center justify-center w-10 h-10 bg-primary-600 rounded-full">
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Профиль пользователя</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Профиль пользователя</h3>
+            <p className="text-xs sm:text-sm text-gray-500">
               Зарегистрирован {formatDate(user.created_at)}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           {!isEditing ? (
             <>
               <button
@@ -161,7 +161,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
             Имя пользователя
           </label>
           {isEditing ? (
@@ -180,7 +180,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
             Email адрес
           </label>
           {isEditing ? (
@@ -211,7 +211,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
             exit={{ opacity: 0, height: 0 }}
             className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg"
           >
-            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-600 text-xs sm:text-sm">{error}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -224,7 +224,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
             exit={{ opacity: 0, height: 0 }}
             className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg"
           >
-            <p className="text-green-600 text-sm">{success}</p>
+            <p className="text-green-600 text-xs sm:text-sm">{success}</p>
           </motion.div>
         )}
       </AnimatePresence>

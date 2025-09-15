@@ -254,12 +254,12 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   }) => (
     <motion.div
       whileHover={{ scale: 1.02 }}
-      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+      className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-xs sm:text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{value}</p>
           {change && (
             <p className={`text-sm mt-1 ${change > 0 ? "text-green-600" : "text-red-600"}`}>
               {change > 0 ? "+" : ""}{change}% за неделю
@@ -276,7 +276,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   return (
     <div className="space-y-6">
       {/* Статистические карточки */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Calendar}
           title="Тренировочных дней"
@@ -312,14 +312,14 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+          className="lg:col-span-2 bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Активность</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Активность</h3>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setActiveChart("weekly")}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeChart === "weekly"
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
@@ -329,7 +329,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
               </button>
               <button
                 onClick={() => setActiveChart("monthly")}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeChart === "monthly"
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
@@ -340,7 +340,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
             </div>
           </div>
           
-          <div className="h-64">
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               {activeChart === "weekly" ? (
                 <BarChart data={weeklyStats}>
@@ -385,19 +385,19 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+          className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <Target className="w-5 h-5 text-primary-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Цели</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Цели</h3>
             </div>
             <button
               onClick={() => setShowGoalForm(true)}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center space-x-1 px-2 sm:px-3 py-1.5 bg-primary-600 text-white text-xs sm:text-sm rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Добавить</span>
+              <span className="hidden sm:inline">Добавить</span>
             </button>
           </div>
           
@@ -459,11 +459,11 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+          className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
         >
           <div className="flex items-center space-x-2 mb-6">
             <Calendar className="w-5 h-5 text-primary-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Последние тренировки</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Последние тренировки</h3>
           </div>
           
           <div className="space-y-4">
@@ -540,11 +540,11 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+          className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
         >
           <div className="flex items-center space-x-2 mb-6">
             <Trophy className="w-5 h-5 text-primary-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Достижения</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Достижения</h3>
           </div>
           
           <div className="space-y-4">
@@ -681,7 +681,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-xl p-6 max-w-md w-full mx-auto shadow-xl max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full mx-auto shadow-xl max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -727,7 +727,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="goal-target" className="block text-sm font-medium text-gray-700 mb-1">
                 Цель *
@@ -759,7 +759,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="goal-unit" className="block text-sm font-medium text-gray-700 mb-1">
                 Единица измерения

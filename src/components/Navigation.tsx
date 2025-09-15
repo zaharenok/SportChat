@@ -26,50 +26,50 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           <button
             onClick={() => onTabChange("chat")}
             className={cn(
-              "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
               activeTab === "chat"
                 ? "bg-white text-primary-700 shadow-sm"
                 : "text-primary-600 hover:text-primary-800"
             )}
           >
             <MessageCircle className="w-4 h-4" />
-            <span>Чат</span>
+            <span className="hidden sm:inline">Чат</span>
           </button>
           <button
             onClick={() => onTabChange("dashboard")}
             className={cn(
-              "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
               activeTab === "dashboard"
                 ? "bg-white text-primary-700 shadow-sm"
                 : "text-primary-600 hover:text-primary-800"
             )}
           >
             <BarChart3 className="w-4 h-4" />
-            <span>Дашборд</span>
+            <span className="hidden sm:inline">Дашборд</span>
           </button>
           <button
             onClick={() => onTabChange("profile")}
             className={cn(
-              "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
               activeTab === "profile"
                 ? "bg-white text-primary-700 shadow-sm"
                 : "text-primary-600 hover:text-primary-800"
             )}
           >
             <User className="w-4 h-4" />
-            <span>Профиль</span>
+            <span className="hidden sm:inline">Профиль</span>
           </button>
           <button
             onClick={() => onTabChange("history")}
             className={cn(
-              "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
               activeTab === "history"
                 ? "bg-white text-primary-700 shadow-sm"
                 : "text-primary-600 hover:text-primary-800"
             )}
           >
             <History className="w-4 h-4" />
-            <span>История</span>
+            <span className="hidden sm:inline">История</span>
           </button>
         </div>
       </div>

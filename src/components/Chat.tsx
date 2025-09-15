@@ -124,7 +124,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   return (
     <div className="h-full max-w-4xl mx-auto flex flex-col bg-white rounded-lg shadow-sm border border-primary-200">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ minHeight: 0 }}>
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4" style={{ minHeight: 0 }}>
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -135,7 +135,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
               className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                className={`max-w-[90%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2 sm:py-3 ${
                   message.isUser
                     ? "text-white"
                     : "bg-primary-50 text-primary-900 border border-primary-200"
@@ -172,8 +172,8 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-primary-200 p-6 bg-gray-50/50">
-        <div className="flex space-x-3">
+      <div className="border-t border-primary-200 p-3 sm:p-6 bg-gray-50/50">
+        <div className="flex space-x-2 sm:space-x-3">
           <div className="flex-1 relative">
             <textarea
               value={inputMessage}
@@ -181,7 +181,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
               onKeyPress={handleKeyPress}
               placeholder="Расскажи о своей тренировке..."
               rows={1}
-              className="w-full px-4 py-3 bg-primary-50 border border-primary-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-sm text-primary-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-primary-50 border border-primary-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-sm text-primary-900"
               style={{
                 minHeight: "48px",
                 maxHeight: "120px",
@@ -191,7 +191,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
           <button
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || isLoading}
-            className="flex items-center justify-center w-12 h-12 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             style={{ background: 'var(--gradient-accent)' }}
           >
             <Send className="w-5 h-5" />
