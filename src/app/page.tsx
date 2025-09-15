@@ -7,6 +7,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { DayManager } from "@/components/DayManager";
 import { LoginForm } from "@/components/LoginForm";
 import { UserProfile } from "@/components/UserProfile";
+import { WorkoutsList } from "@/components/WorkoutsList";
 import { ChatProvider } from "@/lib/chat-context";
 import { Day, daysApi, utils } from "@/lib/client-api";
 import { Calendar, X } from "lucide-react";
@@ -19,7 +20,7 @@ interface User {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history" | "workouts" | "days">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -159,6 +160,21 @@ export default function Home() {
           </div>
         ) : activeTab === "history" ? (
           /* Полноэкранная история дней */
+          <div className="max-w-4xl mx-auto h-full overflow-y-auto">
+            <DayManager 
+              selectedDay={selectedDay}
+              selectedUser={currentUser}
+              onDaySelect={setSelectedDay}
+            />
+          </div>
+        ) : activeTab === "workouts" ? (
+          /* Полноэкранный список тренировок */
+          <WorkoutsList 
+            selectedUser={currentUser}
+            updateTrigger={dashboardUpdateTrigger}
+          />
+        ) : activeTab === "days" ? (
+          /* Полноэкранное управление днями */
           <div className="max-w-4xl mx-auto h-full overflow-y-auto">
             <DayManager 
               selectedDay={selectedDay}

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, BarChart3, User, History, Menu, X } from "lucide-react";
+import { MessageCircle, BarChart3, User, History, Menu, X, Dumbbell, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface NavigationProps {
-  activeTab: "chat" | "dashboard" | "profile" | "history";
-  onTabChange: (tab: "chat" | "dashboard" | "profile" | "history") => void;
+  activeTab: "chat" | "dashboard" | "profile" | "history" | "workouts" | "days";
+  onTabChange: (tab: "chat" | "dashboard" | "profile" | "history" | "workouts" | "days") => void;
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
@@ -16,6 +16,8 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const menuItems = [
     { id: "chat", label: "Чат", icon: MessageCircle },
     { id: "dashboard", label: "Дашборд", icon: BarChart3 },
+    { id: "workouts", label: "Последние тренировки", icon: Dumbbell },
+    { id: "days", label: "Управление днями", icon: Calendar },
     { id: "profile", label: "Профиль", icon: User },
     { id: "history", label: "История", icon: History }
   ] as const;
@@ -39,29 +41,10 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             <h1 className="text-xl font-bold text-primary-800">SportChat</h1>
           </div>
           
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex bg-primary-100 rounded-lg p-1">
-            {menuItems.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => onTabChange(id)}
-                className={cn(
-                  "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
-                  activeTab === id
-                    ? "bg-white text-primary-700 shadow-sm"
-                    : "text-primary-600 hover:text-primary-800"
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Mobile Hamburger Button */}
+          {/* Hamburger Button (всегда показываем) */}
           <button
             onClick={() => setIsMenuOpen(true)}
-            className="md:hidden p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -78,16 +61,16 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMenuOpen(false)}
-              className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden"
+              className="fixed inset-0 bg-black bg-opacity-50 z-50"
             />
             
             {/* Slide-out Panel */}
             <motion.div
-              initial={{ x: "-100%" }}
+              initial={{ x: "100%" }}
               animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
+              exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 h-full w-80 bg-white shadow-xl z-50 md:hidden"
+              className="fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-50"
             >
               <div className="flex flex-col h-full">
                 {/* Header */}

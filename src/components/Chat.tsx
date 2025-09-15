@@ -177,14 +177,21 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
           <div className="flex-1 relative">
             <textarea
               value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
+              onChange={(e) => {
+                setInputMessage(e.target.value);
+                // Auto-resize textarea
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = '48px';
+                target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+              }}
               onKeyPress={handleKeyPress}
-              placeholder="Расскажи о своей тренировке..."
+              placeholder="Расскажи о тренировке..."
               rows={1}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-primary-50 border border-primary-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-sm text-primary-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-primary-50 border border-primary-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-sm text-primary-900 placeholder:text-xs sm:placeholder:text-sm placeholder:text-primary-500"
               style={{
                 minHeight: "48px",
                 maxHeight: "120px",
+                overflow: inputMessage.length > 50 ? 'auto' : 'hidden'
               }}
             />
           </div>
