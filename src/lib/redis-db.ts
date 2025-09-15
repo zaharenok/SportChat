@@ -320,6 +320,29 @@ export const workoutsDb = {
     return newWorkout
   },
 
+  async update(id: string, updates: { exercises: Exercise[] }): Promise<Workout> {
+    console.log('💾 DB: Updating workout:', id, 'with:', updates)
+    
+    const workouts = await redisDb.readArray<Workout>('workouts')
+    const workoutIndex = workouts.findIndex(workout => workout.id === id)
+    
+    if (workoutIndex === -1) {
+      throw new Error(`Workout with id ${id} not found`)
+    }
+    
+    const updatedWorkout: Workout = {
+      ...workouts[workoutIndex],
+      ...updates,
+      updated_at: utils.getCurrentTimestamp()
+    }
+    
+    workouts[workoutIndex] = updatedWorkout
+    await redisDb.writeArray('workouts', workouts)
+    
+    console.log('💾 DB: Workout updated successfully:', updatedWorkout)
+    return updatedWorkout
+  },
+
   async delete(id: string): Promise<void> {
     const workouts = await redisDb.readArray<Workout>('workouts')
     const filteredWorkouts = workouts.filter(workout => workout.id !== id)

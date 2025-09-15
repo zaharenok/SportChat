@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, BarChart3, User, History, Menu, X, Dumbbell, Calendar } from "lucide-react";
+import { MessageCircle, BarChart3, User, History, Menu, X, Dumbbell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface NavigationProps {
-  activeTab: "chat" | "dashboard" | "profile" | "history" | "workouts" | "days";
-  onTabChange: (tab: "chat" | "dashboard" | "profile" | "history" | "workouts" | "days") => void;
+  activeTab: "chat" | "dashboard" | "profile" | "history" | "workouts";
+  onTabChange: (tab: "chat" | "dashboard" | "profile" | "history" | "workouts") => void;
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
@@ -17,7 +17,6 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     { id: "chat", label: "Чат", icon: MessageCircle },
     { id: "dashboard", label: "Дашборд", icon: BarChart3 },
     { id: "workouts", label: "Последние тренировки", icon: Dumbbell },
-    { id: "days", label: "Управление днями", icon: Calendar },
     { id: "profile", label: "Профиль", icon: User },
     { id: "history", label: "История", icon: History }
   ] as const;

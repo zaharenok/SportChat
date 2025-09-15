@@ -157,6 +157,21 @@ export const workoutsApi = {
     return result
   },
 
+  async update(workoutId: string, updates: { exercises: Exercise[] }) {
+    const response = await fetch('/api/workouts', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ workoutId, ...updates }),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update workout')
+    }
+    return response.json()
+  },
+
   async delete(workoutId: string) {
     const response = await fetch(`/api/workouts?workoutId=${workoutId}`, {
       method: 'DELETE',

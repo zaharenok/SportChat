@@ -10,7 +10,6 @@ import { UserProfile } from "@/components/UserProfile";
 import { WorkoutsList } from "@/components/WorkoutsList";
 import { ChatProvider } from "@/lib/chat-context";
 import { Day, daysApi, utils } from "@/lib/client-api";
-import { Calendar, X } from "lucide-react";
 
 interface User {
   id: string
@@ -20,11 +19,10 @@ interface User {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history" | "workouts" | "days">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history" | "workouts">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showMobileDayManager, setShowMobileDayManager] = useState(false);
   // Состояние для принудительного обновления данных в Dashboard
   const [dashboardUpdateTrigger, setDashboardUpdateTrigger] = useState(0);
 
@@ -148,7 +146,7 @@ export default function Home() {
       <div className="h-screen flex flex-col overflow-hidden">
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <main className="flex-1 max-w-7xl mx-auto px-4 py-4 overflow-hidden">
+        <main className="flex-1 px-4 py-4 overflow-hidden">
         {activeTab === "profile" ? (
           /* Полноэкранный профиль */
           <div className="max-w-2xl mx-auto h-full overflow-y-auto">
@@ -173,15 +171,6 @@ export default function Home() {
             selectedUser={currentUser}
             updateTrigger={dashboardUpdateTrigger}
           />
-        ) : activeTab === "days" ? (
-          /* Полноэкранное управление днями */
-          <div className="max-w-4xl mx-auto h-full overflow-y-auto">
-            <DayManager 
-              selectedDay={selectedDay}
-              selectedUser={currentUser}
-              onDaySelect={setSelectedDay}
-            />
-          </div>
         ) : (
           <>
             <div className="w-full h-full">
@@ -192,7 +181,7 @@ export default function Home() {
                   onWorkoutSaved={handleWorkoutSaved}
                 />
               ) : (
-                <div className="h-full overflow-y-auto">
+                <div className="h-full max-w-7xl mx-auto overflow-y-auto">
                   <Dashboard 
                     selectedDay={selectedDay}
                     selectedUser={currentUser}
@@ -201,43 +190,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-            
-            {/* Мобильная панель управления днями */}
-            <div className="sm:hidden fixed bottom-4 right-4 z-50">
-              <button
-                onClick={() => setShowMobileDayManager(true)}
-                className="w-14 h-14 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-colors flex items-center justify-center"
-                title="Управление днями"
-              >
-                <Calendar className="w-6 h-6" />
-              </button>
-            </div>
           </>
-        )}
-
-        {/* Мобильный оверлей для управления днями */}
-        {showMobileDayManager && (
-          <div className="sm:hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-end">
-            <div className="w-full bg-white rounded-t-xl p-4 max-h-[80vh] overflow-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Управление днями</h2>
-                <button
-                  onClick={() => setShowMobileDayManager(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <DayManager 
-                selectedDay={selectedDay}
-                selectedUser={currentUser}
-                onDaySelect={(day) => {
-                  setSelectedDay(day);
-                  setShowMobileDayManager(false);
-                }}
-              />
-            </div>
-          </div>
         )}
       </main>
     </div>

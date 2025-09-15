@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dumbbell, Trash2 } from "lucide-react";
+import { Dumbbell, Trash2, Edit, Save, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { workoutsApi, User, Workout } from "@/lib/client-api";
 
@@ -10,13 +10,29 @@ interface WorkoutsListProps {
   updateTrigger?: number;
 }
 
+interface GroupedWorkout {
+  date: string;
+  workouts: Workout[];
+  totalExercises: number;
+}
+
+interface EditingExercise {
+  workoutId: string;
+  exerciseIndex: number;
+  name: string;
+  sets: number;
+  reps: number;
+  weight: number;
+}
+
 export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; workoutId: string | null }>({ 
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; date: string | null }>({ 
     show: false, 
-    workoutId: null 
+    date: null 
   });
+  const [editingExercise, setEditingExercise] = useState<EditingExercise | null>(null);
 
   useEffect(() => {
     if (selectedUser) {
@@ -37,24 +53,100 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
     }
   };
 
-  const handleDeleteWorkout = (workoutId: string) => {
-    setDeleteConfirmation({ show: true, workoutId });
+  // Группируем тренировки по датам
+  const groupedWorkouts: GroupedWorkout[] = workouts.reduce((groups: GroupedWorkout[], workout) => {
+    const date = workout.created_at.split('T')[0]; // Получаем только дату без времени
+    
+    let existingGroup = groups.find(group => group.date === date);
+    if (!existingGroup) {
+      existingGroup = {
+        date,
+        workouts: [],
+        totalExercises: 0
+      };
+      groups.push(existingGroup);
+    }
+    
+    existingGroup.workouts.push(workout);
+    existingGroup.totalExercises += workout.exercises.length;
+    
+    return groups;
+  }, []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Сортируем по убыванию даты
+
+  const handleDeleteWorkout = (date: string) => {
+    setDeleteConfirmation({ show: true, date });
   };
 
   const confirmDeleteWorkout = async () => {
-    if (deleteConfirmation.workoutId) {
+    if (deleteConfirmation.date) {
       try {
-        await workoutsApi.delete(deleteConfirmation.workoutId);
-        setWorkouts(workouts.filter(workout => workout.id !== deleteConfirmation.workoutId));
-        setDeleteConfirmation({ show: false, workoutId: null });
+        // Найдем все тренировки за этот день и удалим их
+        const workoutsToDelete = workouts.filter(w => w.created_at.split('T')[0] === deleteConfirmation.date);
+        
+        // Удаляем все тренировки за день
+        await Promise.all(workoutsToDelete.map(workout => workoutsApi.delete(workout.id)));
+        
+        // Обновляем список, исключая удаленные тренировки
+        setWorkouts(workouts.filter(w => w.created_at.split('T')[0] !== deleteConfirmation.date));
+        setDeleteConfirmation({ show: false, date: null });
       } catch (error) {
-        console.error('Error deleting workout:', error);
+        console.error('Error deleting workouts:', error);
       }
     }
   };
 
   const cancelDeleteWorkout = () => {
-    setDeleteConfirmation({ show: false, workoutId: null });
+    setDeleteConfirmation({ show: false, date: null });
+  };
+
+  const handleEditExercise = (workoutId: string, exerciseIndex: number, exercise: { name: string; sets: number; reps: number; weight: number }) => {
+    setEditingExercise({
+      workoutId,
+      exerciseIndex,
+      name: exercise.name,
+      sets: exercise.sets,
+      reps: exercise.reps,
+      weight: exercise.weight
+    });
+  };
+
+  const handleSaveExercise = async () => {
+    if (!editingExercise) return;
+
+    try {
+      // Найдем тренировку для обновления
+      const workoutToUpdate = workouts.find(w => w.id === editingExercise.workoutId);
+      if (!workoutToUpdate) return;
+
+      // Обновим упражнение
+      const updatedExercises = [...workoutToUpdate.exercises];
+      updatedExercises[editingExercise.exerciseIndex] = {
+        name: editingExercise.name,
+        sets: editingExercise.sets,
+        reps: editingExercise.reps,
+        weight: editingExercise.weight
+      };
+
+      // Обновим тренировку на сервере
+      await workoutsApi.update(editingExercise.workoutId, {
+        exercises: updatedExercises
+      });
+
+      // Обновим локальное состояние
+      setWorkouts(workouts.map(w => 
+        w.id === editingExercise.workoutId 
+          ? { ...w, exercises: updatedExercises }
+          : w
+      ));
+
+      setEditingExercise(null);
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExercise(null);
   };
 
   if (loading) {
@@ -83,9 +175,9 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-4">
             <AnimatePresence mode="popLayout">
-            {workouts.map((workout) => (
+            {groupedWorkouts.map((groupedWorkout) => (
               <motion.div
-                key={workout.id}
+                key={groupedWorkout.date}
                 initial={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.3 }}
@@ -98,13 +190,17 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900 text-sm sm:text-base">
-                        {new Date(workout.created_at).toLocaleDateString("ru-RU", { day: 'numeric', month: 'long' })}
+                        {new Date(groupedWorkout.date).toLocaleDateString("ru-RU", { 
+                          day: 'numeric', 
+                          month: 'long',
+                          weekday: 'short'
+                        })}
                       </h4>
-                      <p className="text-xs sm:text-sm text-gray-500">{workout.exercises.length} упражнений</p>
+                      <p className="text-xs sm:text-sm text-gray-500">{groupedWorkout.totalExercises} упражнений</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDeleteWorkout(workout.id)}
+                    onClick={() => handleDeleteWorkout(groupedWorkout.date)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-100 rounded-lg text-red-600 hover:text-red-700"
                     title="Удалить тренировку"
                   >
@@ -113,35 +209,119 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                 </div>
                 
                 <div className="space-y-2">
-                  {workout.exercises.map((exercise, index) => (
-                    <div key={index} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-100">
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-800 text-xs sm:text-sm capitalize">{exercise.name}</h5>
-                        <div className="flex items-center space-x-4 mt-1 text-xs text-gray-600">
-                          {exercise.weight > 0 && (
-                            <span className="flex items-center space-x-1">
-                              <span className="font-medium">Вес:</span>
-                              <span>{exercise.weight} кг</span>
-                            </span>
+                  {/* Перебираем тренировки и их упражнения */}
+                  {groupedWorkout.workouts.map(workout => 
+                    workout.exercises.map((exercise, exerciseIndex) => {
+                      const isEditing = editingExercise?.workoutId === workout.id && editingExercise?.exerciseIndex === exerciseIndex;
+                      
+                      return (
+                        <div key={`${workout.id}-${exerciseIndex}`} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-100 group">
+                          {isEditing ? (
+                            /* Режим редактирования */
+                            <div className="flex-1 space-y-2">
+                              <input
+                                type="text"
+                                value={editingExercise.name}
+                                onChange={(e) => setEditingExercise({...editingExercise, name: e.target.value})}
+                                className="w-full p-1 text-xs sm:text-sm font-medium text-gray-800 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                placeholder="Название упражнения"
+                              />
+                              <div className="flex items-center space-x-2 text-xs">
+                                <div className="flex items-center space-x-1">
+                                  <span className="font-medium text-gray-600">Вес:</span>
+                                  <input
+                                    type="number"
+                                    value={editingExercise.weight}
+                                    onChange={(e) => setEditingExercise({...editingExercise, weight: parseInt(e.target.value) || 0})}
+                                    className="w-16 p-1 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    min="0"
+                                  />
+                                  <span className="text-gray-600">кг</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <span className="font-medium text-gray-600">Подходы:</span>
+                                  <input
+                                    type="number"
+                                    value={editingExercise.sets}
+                                    onChange={(e) => setEditingExercise({...editingExercise, sets: parseInt(e.target.value) || 0})}
+                                    className="w-16 p-1 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    min="1"
+                                  />
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <span className="font-medium text-gray-600">Повторы:</span>
+                                  <input
+                                    type="number"
+                                    value={editingExercise.reps}
+                                    onChange={(e) => setEditingExercise({...editingExercise, reps: parseInt(e.target.value) || 0})}
+                                    className="w-16 p-1 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    min="1"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Режим просмотра */
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-800 text-xs sm:text-sm capitalize">{exercise.name}</h5>
+                              <div className="flex items-center space-x-4 mt-1 text-xs text-gray-600">
+                                {exercise.weight > 0 && (
+                                  <span className="flex items-center space-x-1">
+                                    <span className="font-medium">Вес:</span>
+                                    <span>{exercise.weight} кг</span>
+                                  </span>
+                                )}
+                                <span className="flex items-center space-x-1">
+                                  <span className="font-medium">Подходы:</span>
+                                  <span>{exercise.sets}</span>
+                                </span>
+                                <span className="flex items-center space-x-1">
+                                  <span className="font-medium">Повторы:</span>
+                                  <span>{exercise.reps}</span>
+                                </span>
+                              </div>
+                            </div>
                           )}
-                          <span className="flex items-center space-x-1">
-                            <span className="font-medium">Подходы:</span>
-                            <span>{exercise.sets}</span>
-                          </span>
-                          <span className="flex items-center space-x-1">
-                            <span className="font-medium">Повторы:</span>
-                            <span>{exercise.reps}</span>
-                          </span>
+                          
+                          {/* Кнопки управления */}
+                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={handleSaveExercise}
+                                  className="p-1 hover:bg-green-100 rounded text-green-600 hover:text-green-700"
+                                  title="Сохранить"
+                                >
+                                  <Save className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="p-1 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-700"
+                                  title="Отмена"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleEditExercise(workout.id, exerciseIndex, exercise)}
+                                className="p-1 hover:bg-blue-100 rounded text-blue-600 hover:text-blue-700"
+                                title="Редактировать"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })
+                  ).flat()}
                 </div>
               </motion.div>
             ))}
             </AnimatePresence>
             
-            {workouts.length === 0 && (
+            {groupedWorkouts.length === 0 && workouts.length === 0 && (
               <div className="text-center py-12 text-gray-500">
                 <Dumbbell className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                 <p className="text-sm sm:text-base mb-2">Пока нет записанных тренировок</p>

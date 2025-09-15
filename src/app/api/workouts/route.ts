@@ -59,6 +59,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const { workoutId, exercises } = await request.json()
+    
+    console.log('✏️ API: Updating workout with data:', {
+      workoutId,
+      exercises: exercises?.length ? exercises : 'NO EXERCISES',
+      exerciseDetails: exercises
+    })
+    
+    if (!workoutId || !exercises) {
+      console.error('❌ API: Missing required fields:', { workoutId: !!workoutId, exercises: !!exercises })
+      return NextResponse.json({ 
+        error: 'workoutId and exercises are required' 
+      }, { status: 400 })
+    }
+
+    const updatedWorkout = await workoutsDb.update(workoutId, { exercises })
+    console.log('✅ API: Workout updated successfully:', updatedWorkout)
+    return NextResponse.json(updatedWorkout)
+  } catch (error) {
+    console.error('❌ API: Error updating workout:', error)
+    return NextResponse.json({ error: 'Failed to update workout' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
