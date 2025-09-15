@@ -1,6 +1,8 @@
 "use client";
 
-import { MessageCircle, BarChart3, User, History } from "lucide-react";
+import { useState } from "react";
+import { MessageCircle, BarChart3, User, History, Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface NavigationProps {
@@ -9,70 +11,136 @@ interface NavigationProps {
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const menuItems = [
+    { id: "chat", label: "Чат", icon: MessageCircle },
+    { id: "dashboard", label: "Дашборд", icon: BarChart3 },
+    { id: "profile", label: "Профиль", icon: User },
+    { id: "history", label: "История", icon: History }
+  ] as const;
+
+  const handleTabChange = (tab: typeof activeTab) => {
+    onTabChange(tab);
+    setIsMenuOpen(false);
+  };
+
   return (
-    <div className="bg-white border-b border-primary-200 px-4 py-3 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: 'var(--gradient-primary)' }}
-          >
-            <span className="text-white font-bold text-sm">S</span>
+    <>
+      <div className="bg-white border-b border-primary-200 px-4 py-3 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--gradient-primary)' }}
+            >
+              <span className="text-white font-bold text-sm">S</span>
+            </div>
+            <h1 className="text-xl font-bold text-primary-800">SportChat</h1>
           </div>
-          <h1 className="text-xl font-bold text-primary-800">SportChat</h1>
-        </div>
-        
-        <div className="flex bg-primary-100 rounded-lg p-1">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex bg-primary-100 rounded-lg p-1">
+            {menuItems.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => onTabChange(id)}
+                className={cn(
+                  "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+                  activeTab === id
+                    ? "bg-white text-primary-700 shadow-sm"
+                    : "text-primary-600 hover:text-primary-800"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Mobile Hamburger Button */}
           <button
-            onClick={() => onTabChange("chat")}
-            className={cn(
-              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
-              activeTab === "chat"
-                ? "bg-white text-primary-700 shadow-sm"
-                : "text-primary-600 hover:text-primary-800"
-            )}
+            onClick={() => setIsMenuOpen(true)}
+            className="md:hidden p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
           >
-            <MessageCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Чат</span>
-          </button>
-          <button
-            onClick={() => onTabChange("dashboard")}
-            className={cn(
-              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
-              activeTab === "dashboard"
-                ? "bg-white text-primary-700 shadow-sm"
-                : "text-primary-600 hover:text-primary-800"
-            )}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Дашборд</span>
-          </button>
-          <button
-            onClick={() => onTabChange("profile")}
-            className={cn(
-              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
-              activeTab === "profile"
-                ? "bg-white text-primary-700 shadow-sm"
-                : "text-primary-600 hover:text-primary-800"
-            )}
-          >
-            <User className="w-4 h-4" />
-            <span className="hidden sm:inline">Профиль</span>
-          </button>
-          <button
-            onClick={() => onTabChange("history")}
-            className={cn(
-              "flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all",
-              activeTab === "history"
-                ? "bg-white text-primary-700 shadow-sm"
-                : "text-primary-600 hover:text-primary-800"
-            )}
-          >
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">История</span>
+            <Menu className="w-6 h-6" />
           </button>
         </div>
       </div>
-    </div>
+
+      {/* Mobile Slide-out Menu */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden"
+            />
+            
+            {/* Slide-out Panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 left-0 h-full w-80 bg-white shadow-xl z-50 md:hidden"
+            >
+              <div className="flex flex-col h-full">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ background: 'var(--gradient-primary)' }}
+                    >
+                      <span className="text-white font-bold text-sm">S</span>
+                    </div>
+                    <h2 className="text-lg font-bold text-primary-800">SportChat</h2>
+                  </div>
+                  <button
+                    onClick={() => setIsMenuOpen(false)}
+                    className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Menu Items */}
+                <div className="flex-1 p-4">
+                  <nav className="space-y-2">
+                    {menuItems.map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => handleTabChange(id)}
+                        className={cn(
+                          "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left font-medium transition-all",
+                          activeTab === id
+                            ? "bg-primary-100 text-primary-700 border border-primary-200"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        )}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 text-center">
+                    SportChat - Ваш персональный тренер
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

@@ -144,13 +144,13 @@ export default function Home() {
 
   return (
     <ChatProvider>
-      <div className="min-h-screen">
+      <div className="h-screen flex flex-col overflow-hidden">
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <main className="max-w-7xl mx-auto px-4 py-4">
+        <main className="flex-1 max-w-7xl mx-auto px-4 py-4 overflow-hidden">
         {activeTab === "profile" ? (
           /* Полноэкранный профиль */
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto h-full overflow-y-auto">
             <UserProfile 
               user={currentUser}
               onUserUpdate={handleUserUpdate}
@@ -159,7 +159,7 @@ export default function Home() {
           </div>
         ) : activeTab === "history" ? (
           /* Полноэкранная история дней */
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto h-full overflow-y-auto">
             <DayManager 
               selectedDay={selectedDay}
               selectedUser={currentUser}
@@ -168,7 +168,7 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <div className="w-full h-[calc(100vh-140px)]">
+            <div className="w-full h-full">
               {activeTab === "chat" ? (
                 <Chat 
                   selectedDay={selectedDay} 
