@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Flame, Plus, Edit, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
-import { Day, User, goalsApi, achievementsApi, Goal, Achievement } from "@/lib/client-api";
+import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, Workout } from "@/lib/client-api";
 
 // Removed mock data - charts now use real workout data calculated below
 
@@ -20,6 +20,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   const [activeChart, setActiveChart] = useState<"weekly" | "monthly">("weekly");
   const [goals, setGoals] = useState<Goal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   // Collapsible widgets state - reserved for future implementation
@@ -34,16 +35,19 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   const loadData = async () => {
     try {
       console.log('📊 Dashboard: Loading data...')
-      const [goalsData, achievementsData] = await Promise.all([
+      const [goalsData, achievementsData, workoutsData] = await Promise.all([
         goalsApi.getAll(selectedUser.id),
-        achievementsApi.getAll(selectedUser.id)
+        achievementsApi.getAll(selectedUser.id),
+        workoutsApi.getByUser(selectedUser.id)
       ]);
       console.log('📊 Dashboard: Loaded data:', {
         goals: goalsData.length,
-        achievements: achievementsData.length
+        achievements: achievementsData.length,
+        workouts: workoutsData.length
       })
       setGoals(goalsData);
       setAchievements(achievementsData);
+      setWorkouts(workoutsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -106,28 +110,42 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
     setEditingGoal(null);
   };
 
-  // Вычисляем динамическую статистику на основе реальных данных
+  // Вычисляем динамическую статистику на основе реальных тренировок
   const calculateStats = () => {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
-    // Статистика на основе целей и достижений
-    const activeGoals = goals.filter(goal => goal.current_value < goal.target_value).length;
-    const completedGoals = goals.filter(goal => goal.current_value >= goal.target_value).length;
-    const recentAchievements = achievements.filter(a => new Date(a.date) >= weekAgo).length;
+    // Считаем уникальные дни с тренировками
+    const uniqueTrainingDays = new Set(
+      workouts.map(workout => new Date(workout.created_at).toISOString().split('T')[0])
+    ).size;
+    
+    // Считаем уникальные упражнения
+    const uniqueExercises = new Set(
+      workouts.flatMap(workout => 
+        workout.exercises?.map(ex => ex.name.toLowerCase()) || []
+      )
+    ).size;
+    
+    // Считаем тренировки за последнюю неделю
+    const recentWorkouts = workouts.filter(workout => 
+      new Date(workout.created_at) >= weekAgo
+    ).length;
+    
+    // Считаем общий прогресс по целям
     const totalProgress = goals.length > 0 ? Math.round(
       goals.reduce((sum, goal) => sum + (goal.current_value / goal.target_value * 100), 0) / goals.length
     ) : 0;
     
     return {
-      trainingDays: completedGoals, // Выполненные цели
-      uniqueExercises: activeGoals, // Активные цели
-      avgSetsPerWorkout: recentAchievements, // Недавние достижения
+      trainingDays: uniqueTrainingDays, // Дни с тренировками
+      uniqueExercises: uniqueExercises, // Уникальные упражнения
+      avgSetsPerWorkout: recentWorkouts, // Тренировки за неделю
       avgRepsPerSet: Math.min(totalProgress, 100) // Общий прогресс %
     };
   };
 
-  // Расчет недельной активности на основе целей и достижений
+  // Расчет недельной активности на основе реальных тренировок
   const calculateWeeklyStats = () => {
     const now = new Date();
     const weekdays = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
@@ -136,22 +154,30 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dayName = weekdays[date.getDay()];
+      const dateStr = date.toISOString().split('T')[0];
       
-      // Простая симуляция активности на основе существующих данных
-      const dayActivity = Math.floor(Math.random() * 3); // 0-2 цели в день
-      const dayProgress = Math.floor(Math.random() * 60) + 20; // 20-80% прогресс
+      // Находим тренировки за этот день
+      const dayWorkouts = workouts.filter(workout => {
+        const workoutDate = new Date(workout.created_at).toISOString().split('T')[0];
+        return workoutDate === dateStr;
+      });
+
+      // Считаем общее количество повторений как "интенсивность"
+      const totalReps = dayWorkouts.reduce((sum, workout) => 
+        sum + (workout.exercises?.reduce((exSum, ex) => exSum + (ex.reps * ex.sets), 0) || 0), 0
+      );
 
       weeklyData.push({
         day: dayName,
-        workouts: dayActivity,
-        duration: dayProgress
+        workouts: dayWorkouts.length, // Количество тренировок
+        duration: Math.min(totalReps, 100) // Интенсивность (ограничиваем 100 для графика)
       });
     }
 
     return weeklyData;
   };
 
-  // Расчет месячной активности
+  // Расчет месячной активности на основе реальных тренировок
   const calculateMonthlyStats = () => {
     const now = new Date();
     const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
@@ -160,15 +186,27 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
     for (let i = 3; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = monthNames[monthDate.getMonth()];
+      const year = monthDate.getFullYear();
+      const month = monthDate.getMonth();
       
-      // Простая симуляция месячной активности
-      const monthGoals = Math.floor(Math.random() * 15) + 5; // 5-20 целей в месяц
-      const monthProgress = Math.floor(Math.random() * 40) + 30; // 30-70% прогресс
+      // Находим тренировки за этот месяц
+      const monthWorkouts = workouts.filter(workout => {
+        const workoutDate = new Date(workout.created_at);
+        return workoutDate.getFullYear() === year && workoutDate.getMonth() === month;
+      });
+
+      // Считаем среднее количество упражнений за тренировку
+      const totalExercises = monthWorkouts.reduce((sum, workout) => 
+        sum + (workout.exercises?.length || 0), 0
+      );
+      const avgExercisesPerWorkout = monthWorkouts.length > 0 
+        ? Math.round(totalExercises / monthWorkouts.length) 
+        : 0;
 
       monthlyData.push({
         month: monthName,
-        workouts: monthGoals,
-        avg: monthProgress
+        workouts: monthWorkouts.length, // Количество тренировок в месяц
+        avg: Math.min(avgExercisesPerWorkout * 10, 100) // Среднее * 10 для наглядности графика
       });
     }
 
@@ -213,28 +251,28 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Calendar}
-          title="Выполненных целей"
+          title="Дней с тренировками"
           value={stats.trainingDays.toString()}
           change={0}
           color="bg-primary-600"
         />
         <StatCard
           icon={Dumbbell}
-          title="Активных целей"
+          title="Уникальных упражнений"
           value={stats.uniqueExercises.toString()}
           change={0}
           color="bg-primary-500"
         />
         <StatCard
           icon={Flame}
-          title="Недавних достижений"
+          title="Тренировок за неделю"
           value={stats.avgSetsPerWorkout.toString()}
           change={0}
           color="bg-primary-700"
         />
         <StatCard
           icon={TrendingUp}
-          title="Общий прогресс %"
+          title="Прогресс целей %"
           value={stats.avgRepsPerSet.toString()}
           change={0}
           color="bg-primary-800"

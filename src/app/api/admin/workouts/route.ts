@@ -12,7 +12,12 @@ export async function GET(request: NextRequest) {
       const allWorkouts = await workoutsDb.getByUser(userId)
       
       // Группируем по месяцам
-      const workoutsByMonth: { [key: string]: any[] } = {}
+      const workoutsByMonth: { [key: string]: Array<{
+        id: string;
+        created_at: string;
+        day_id: string;
+        exercises_count: number;
+      }> } = {}
       
       allWorkouts.forEach(workout => {
         const date = new Date(workout.created_at)

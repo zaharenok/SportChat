@@ -4,6 +4,16 @@
 export type { User, Day, Workout, ChatMessage, Goal, Achievement, Exercise } from './redis-db'
 import type { Day, Exercise } from './redis-db'
 
+// Helper функция для получения правильного базового URL
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // На клиенте используем relative URL
+    return '';
+  }
+  // На сервере используем полный URL для localhost
+  return 'http://localhost:3000';
+};
+
 // Утилиты
 export const utils = {
   getCurrentDate: () => new Date().toISOString().split('T')[0],
@@ -20,7 +30,7 @@ export const utils = {
 // API для пользователей
 export const usersApi = {
   async getAll() {
-    const response = await fetch('/api/users')
+    const response = await fetch(`${getBaseUrl()}/api/users`)
     if (!response.ok) {
       throw new Error('Failed to fetch users')
     }
@@ -28,7 +38,7 @@ export const usersApi = {
   },
 
   async create(name: string, email: string) {
-    const response = await fetch('/api/users', {
+    const response = await fetch(`${getBaseUrl()}/api/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,7 +55,7 @@ export const usersApi = {
 // API для дней
 export const daysApi = {
   async getAll(userId: string) {
-    const response = await fetch(`/api/days?userId=${userId}`)
+    const response = await fetch(`${getBaseUrl()}/api/days?userId=${userId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch days')
     }
@@ -58,7 +68,7 @@ export const daysApi = {
   },
 
   async create(userId: string, date: string) {
-    const response = await fetch('/api/days', {
+    const response = await fetch(`${getBaseUrl()}/api/days`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +91,7 @@ export const daysApi = {
   },
 
   async delete(dayId: string) {
-    const response = await fetch(`/api/days?dayId=${dayId}`, {
+    const response = await fetch(`${getBaseUrl()}/api/days?dayId=${dayId}`, {
       method: 'DELETE',
     })
     if (!response.ok) {
@@ -94,7 +104,7 @@ export const daysApi = {
 // API для чата
 export const chatApi = {
   async getByDay(dayId: string) {
-    const response = await fetch(`/api/chat?dayId=${dayId}`)
+    const response = await fetch(`${getBaseUrl()}/api/chat?dayId=${dayId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch chat messages')
     }
@@ -102,7 +112,7 @@ export const chatApi = {
   },
 
   async create(userId: string, dayId: string, message: string, isUser: boolean) {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(`${getBaseUrl()}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -120,7 +130,7 @@ export const chatApi = {
 export const workoutsApi = {
   async getByUser(userId: string) {
     console.log('🌐 CLIENT: Fetching workouts for user:', userId)
-    const response = await fetch(`/api/workouts?userId=${userId}`)
+    const response = await fetch(`${getBaseUrl()}/api/workouts?userId=${userId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch workouts')
     }
@@ -130,7 +140,7 @@ export const workoutsApi = {
   },
 
   async getByDay(userId: string, dayId: string) {
-    const response = await fetch(`/api/workouts?userId=${userId}&dayId=${dayId}`)
+    const response = await fetch(`${getBaseUrl()}/api/workouts?userId=${userId}&dayId=${dayId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch workouts')
     }
@@ -139,7 +149,7 @@ export const workoutsApi = {
 
   async create(userId: string, dayId: string, chatMessageId: string, exercises: Exercise[]) {
     console.log('Creating workout:', { userId, dayId, chatMessageId, exercises })
-    const response = await fetch('/api/workouts', {
+    const response = await fetch(`${getBaseUrl()}/api/workouts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -158,7 +168,7 @@ export const workoutsApi = {
   },
 
   async update(workoutId: string, updates: { exercises: Exercise[] }) {
-    const response = await fetch('/api/workouts', {
+    const response = await fetch(`${getBaseUrl()}/api/workouts`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -173,7 +183,7 @@ export const workoutsApi = {
   },
 
   async delete(workoutId: string) {
-    const response = await fetch(`/api/workouts?workoutId=${workoutId}`, {
+    const response = await fetch(`${getBaseUrl()}/api/workouts?workoutId=${workoutId}`, {
       method: 'DELETE',
     })
     if (!response.ok) {
@@ -186,7 +196,7 @@ export const workoutsApi = {
 // API для целей
 export const goalsApi = {
   async getAll(userId: string) {
-    const response = await fetch(`/api/goals?userId=${userId}`, {
+    const response = await fetch(`${getBaseUrl()}/api/goals?userId=${userId}`, {
       credentials: 'include'
     })
     if (!response.ok) {
@@ -204,7 +214,7 @@ export const goalsApi = {
     category?: string
     dueDate?: string
   }) {
-    const response = await fetch('/api/goals', {
+    const response = await fetch(`${getBaseUrl()}/api/goals`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -228,7 +238,7 @@ export const goalsApi = {
     dueDate?: string
     isCompleted?: boolean
   }) {
-    const response = await fetch('/api/goals', {
+    const response = await fetch(`${getBaseUrl()}/api/goals`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -243,7 +253,7 @@ export const goalsApi = {
   },
 
   async delete(goalId: string) {
-    const response = await fetch(`/api/goals?goalId=${goalId}`, {
+    const response = await fetch(`${getBaseUrl()}/api/goals?goalId=${goalId}`, {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -257,7 +267,7 @@ export const goalsApi = {
 // API для достижений
 export const achievementsApi = {
   async getAll(userId: string) {
-    const response = await fetch(`/api/achievements?userId=${userId}`)
+    const response = await fetch(`${getBaseUrl()}/api/achievements?userId=${userId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch achievements')
     }

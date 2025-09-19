@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { workoutsDb, redisDb } from '@/lib/redis-db'
+import { NextResponse } from 'next/server'
+import { redisDb } from '@/lib/redis-db'
 
 export async function GET() {
   try {

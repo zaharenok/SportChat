@@ -14,7 +14,7 @@ interface ChatProps {
 }
 
 export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
-  const { messages, isLoading, setMessages, sendMessage } = useChatContext();
+  const { messages, isLoading, setMessages, sendMessage, addMessage, setLoading } = useChatContext();
   const [inputMessage, setInputMessage] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -92,16 +92,59 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
 
     const messageText = inputMessage.trim();
     setInputMessage("");
-
-    // Сохраняем пользовательское сообщение в базу
+    
+    // Используем новый API endpoint для полной обработки сообщения
+    setLoading(true);
     try {
-      await chatApi.create(selectedUser.id, selectedDay.id, messageText, true);
-    } catch (error) {
-      console.error('Ошибка сохранения пользовательского сообщения:', error);
-    }
+      console.log('📨 Sending message via process-message API:', messageText);
+      const response = await fetch('/api/process-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          dayId: selectedDay.id,
+          message: messageText
+        })
+      });
 
-    // Используем глобальный контекст для отправки сообщения
-    await sendMessage(messageText, selectedUser.id, selectedDay.id, onWorkoutSaved, selectedUser.email, selectedUser.name);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Message processed successfully:', result);
+      
+      // Добавляем пользовательское сообщение в UI
+      addMessage({
+        text: messageText,
+        isUser: true,
+        dayId: selectedDay.id
+      });
+      
+      // Добавляем ответ системы
+      if (result.message) {
+        addMessage({
+          text: result.message,
+          isUser: false,
+          dayId: selectedDay.id
+        });
+      }
+      
+      // Уведомляем об обновлении данных если была тренировка
+      if (result.workout_logged && onWorkoutSaved) {
+        console.log('🔄 Notifying about workout save');
+        onWorkoutSaved();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error processing message:', error);
+      // Fallback - используем старый метод
+      await sendMessage(messageText, selectedUser.id, selectedDay.id, onWorkoutSaved, selectedUser.email, selectedUser.name);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

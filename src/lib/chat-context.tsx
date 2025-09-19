@@ -92,26 +92,33 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           const goalTitle = goal.title.toLowerCase();
           console.log(`🔍 Comparing exercise "${exerciseName}" with goal "${goalTitle}"`);
           
-          // Простая логика сопоставления упражнений и целей
+          // Расширенная логика сопоставления упражнений и целей
           const isMatchingGoal = 
-            (exerciseName.includes("подтягивани") && goalTitle.includes("подтягива")) ||
-            (exerciseName.includes("подтягива") && goalTitle.includes("подтягива")) ||
-            (exerciseName.includes("приседани") && goalTitle.includes("приседа")) ||
-            (exerciseName.includes("отжимани") && goalTitle.includes("отжима")) ||
+            // Подтягивания - различные формы
+            ((exerciseName.includes("подтягивани") || exerciseName.includes("подтягива")) && 
+             (goalTitle.includes("подтягива") || goalTitle.includes("подтягат") || goalTitle.includes("подтянут"))) ||
+            // Приседания  
+            ((exerciseName.includes("приседани") || exerciseName.includes("приседа")) && 
+             (goalTitle.includes("приседа") || goalTitle.includes("присест"))) ||
+            // Отжимания
+            ((exerciseName.includes("отжимани") || exerciseName.includes("отжима")) && 
+             (goalTitle.includes("отжима") || goalTitle.includes("отжат"))) ||
+            // Планка
             (exerciseName.includes("планк") && goalTitle.includes("планк")) ||
+            // Пресс
             (exerciseName.includes("пресс") && goalTitle.includes("пресс"));
           
           console.log(`🤔 Is matching goal? ${isMatchingGoal}`);
           
           if (isMatchingGoal) {
-            const newValue = goal.current_value + totalReps;
-            console.log(`🎯 Updating goal "${goal.title}": ${goal.current_value} + ${totalReps} = ${newValue}`);
+            const newValue = Math.max(0, goal.current_value - totalReps);
+            console.log(`🎯 Updating goal "${goal.title}": ${goal.current_value} - ${totalReps} = ${newValue}`);
             
             try {
               // Обновляем цель
               const updatedGoal = await goalsApi.update(goal.id, {
                 currentValue: newValue,
-                isCompleted: newValue >= goal.target_value
+                isCompleted: newValue <= 0
               });
               
               console.log(`✅ Goal updated successfully:`, updatedGoal);

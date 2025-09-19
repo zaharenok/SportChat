@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Goal {
   id: string;
@@ -17,7 +17,7 @@ export default function TestGoalsPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
 
-  const loadGoals = async () => {
+  const loadGoals = useCallback(async () => {
     if (!userId) return;
     
     try {
@@ -33,7 +33,7 @@ export default function TestGoalsPage() {
     } catch (error) {
       setResult(`Error loading goals: ${error}`);
     }
-  };
+  }, [userId]);
 
   const testGoalUpdate = async () => {
     if (!userId || !selectedGoal) {
@@ -76,7 +76,7 @@ export default function TestGoalsPage() {
 
   useEffect(() => {
     loadGoals();
-  }, [userId]);
+  }, [userId, loadGoals]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

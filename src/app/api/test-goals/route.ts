@@ -19,13 +19,13 @@ export async function POST(request: NextRequest) {
     
     console.log('🧪 TEST: Found goal:', { title: goal.title, current: goal.current_value, target: goal.target_value })
     
-    // Обновляем цель
-    const newValue = goal.current_value + increment
-    console.log('🧪 TEST: Updating goal from', goal.current_value, 'to', newValue)
+    // Обновляем цель (уменьшаем при выполнении упражнений)
+    const newValue = Math.max(0, goal.current_value - increment)
+    console.log('🧪 TEST: Updating goal from', goal.current_value, 'to', newValue, '(decreased by', increment, ')')
     
     const updatedGoal = await goalsApi.update(goalId, {
       currentValue: newValue,
-      isCompleted: newValue >= goal.target_value
+      isCompleted: newValue <= 0
     })
     
     console.log('🧪 TEST: Goal updated successfully:', updatedGoal)
