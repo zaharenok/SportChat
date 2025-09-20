@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Chat } from "@/components/Chat";
 import { Dashboard } from "@/components/Dashboard";
-import { DayManager } from "@/components/DayManager";
 import { LoginForm } from "@/components/LoginForm";
 import { UserProfile } from "@/components/UserProfile";
 import { WorkoutsList } from "@/components/WorkoutsList";
@@ -19,7 +18,7 @@ interface User {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "history" | "workouts">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "workouts">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,15 +153,6 @@ export default function Home() {
               user={currentUser}
               onUserUpdate={handleUserUpdate}
               onLogout={handleLogout}
-            />
-          </div>
-        ) : activeTab === "history" ? (
-          /* Полноэкранная история дней */
-          <div className="max-w-4xl mx-auto h-full overflow-y-auto">
-            <DayManager 
-              selectedDay={selectedDay}
-              selectedUser={currentUser}
-              onDaySelect={setSelectedDay}
             />
           </div>
         ) : activeTab === "workouts" ? (

@@ -115,33 +115,40 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
-    // Считаем уникальные дни с тренировками
-    const uniqueTrainingDays = new Set(
+    // Всего уникальных дней с тренировками (за все время)
+    const totalTrainingDays = new Set(
       workouts.map(workout => new Date(workout.created_at).toISOString().split('T')[0])
     ).size;
     
-    // Считаем уникальные упражнения
+    // Уникальные дни с тренировками за последнюю неделю
+    const weeklyTrainingDays = new Set(
+      workouts
+        .filter(workout => new Date(workout.created_at) >= weekAgo)
+        .map(workout => new Date(workout.created_at).toISOString().split('T')[0])
+    ).size;
+    
+    
+    // Уникальные упражнения за все время
     const uniqueExercises = new Set(
       workouts.flatMap(workout => 
         workout.exercises?.map(ex => ex.name.toLowerCase()) || []
       )
     ).size;
     
-    // Считаем тренировки за последнюю неделю
-    const recentWorkouts = workouts.filter(workout => 
-      new Date(workout.created_at) >= weekAgo
-    ).length;
-    
-    // Считаем общий прогресс по целям
+    // Общий прогресс по целям (исправленная логика)
     const totalProgress = goals.length > 0 ? Math.round(
-      goals.reduce((sum, goal) => sum + (goal.current_value / goal.target_value * 100), 0) / goals.length
+      goals.reduce((sum, goal) => {
+        // Цели уменьшаются, поэтому прогресс = (target - current) / target * 100
+        const progress = ((goal.target_value - goal.current_value) / goal.target_value) * 100;
+        return sum + Math.max(0, Math.min(progress, 100));
+      }, 0) / goals.length
     ) : 0;
     
     return {
-      trainingDays: uniqueTrainingDays, // Дни с тренировками
+      trainingDays: totalTrainingDays, // Всего дней с тренировками
       uniqueExercises: uniqueExercises, // Уникальные упражнения
-      avgSetsPerWorkout: recentWorkouts, // Тренировки за неделю
-      avgRepsPerSet: Math.min(totalProgress, 100) // Общий прогресс %
+      weeklyTrainingDays: weeklyTrainingDays, // Дни тренировок за неделю (0-7)
+      avgRepsPerSet: Math.min(totalProgress, 100) // Общий прогресс целей %
     };
   };
 
@@ -265,8 +272,8 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
         />
         <StatCard
           icon={Flame}
-          title="Тренировок за неделю"
-          value={stats.avgSetsPerWorkout.toString()}
+          title="Дней тренировок за неделю"
+          value={stats.weeklyTrainingDays.toString()}
           change={0}
           color="bg-primary-700"
         />
