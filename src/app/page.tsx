@@ -7,6 +7,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { LoginForm } from "@/components/LoginForm";
 import { UserProfile } from "@/components/UserProfile";
 import { WorkoutsList } from "@/components/WorkoutsList";
+import { Achievements } from "@/components/Achievements";
 import { ChatProvider } from "@/lib/chat-context";
 import { Day, daysApi, utils } from "@/lib/client-api";
 
@@ -18,7 +19,7 @@ interface User {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "workouts">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "workouts" | "achievements">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,6 +162,11 @@ export default function Home() {
             selectedUser={currentUser}
             updateTrigger={dashboardUpdateTrigger}
           />
+        ) : activeTab === "achievements" ? (
+          /* Полноэкранные достижения */
+          <div className="h-full overflow-y-auto">
+            <Achievements selectedUser={currentUser} />
+          </div>
         ) : (
           <>
             <div className="w-full h-full">

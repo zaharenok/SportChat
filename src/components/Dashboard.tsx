@@ -135,13 +135,14 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
       )
     ).size;
     
-    // Общий прогресс по целям
-    const totalProgress = goals.length > 0 ? Math.round(
-      goals.reduce((sum, goal) => {
+    // Общий прогресс по активным целям
+    const activeGoals = goals.filter(goal => !goal.is_completed);
+    const totalProgress = activeGoals.length > 0 ? Math.round(
+      activeGoals.reduce((sum, goal) => {
         // Нормальный прогресс: (current / target) * 100
         const progress = (goal.current_value / goal.target_value) * 100;
         return sum + Math.max(0, Math.min(progress, 100));
-      }, 0) / goals.length
+      }, 0) / activeGoals.length
     ) : 0;
     
     return {
@@ -381,14 +382,14 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           </div>
           
           <div className="space-y-4">
-            {goals.length === 0 ? (
+            {goals.filter(goal => !goal.is_completed).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm">Нет целей</p>
+                <p className="text-sm">Нет активных целей</p>
                 <p className="text-xs">Нажмите &quot;Добавить&quot;, чтобы создать первую цель</p>
               </div>
             ) : (
-              goals.map((goal) => (
+              goals.filter(goal => !goal.is_completed).map((goal) => (
                 <div key={goal.id} className="group space-y-2 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex justify-between items-center">
                     <p className="text-sm font-medium text-gray-700">{goal.title}</p>

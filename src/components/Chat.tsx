@@ -80,7 +80,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   };
 
   const scrollToBottom = () => {
-    // Небольшая задержка для завершения анимаций
+    // Простой плавный скролл
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ 
         behavior: "smooth",
@@ -93,6 +93,13 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Скролл при появлении индикатора "Печатает..."
+  useEffect(() => {
+    if (isLoading) {
+      scrollToBottom();
+    }
+  }, [isLoading]);
 
   // Дополнительный скролл после загрузки
   useEffect(() => {
@@ -137,6 +144,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         dayId: selectedDay.id
       });
       
+      // Принудительный скролл после пользовательского сообщения
+      setTimeout(() => scrollToBottom(), 100);
+      
       // Добавляем ответ системы
       if (result.message) {
         addMessage({
@@ -144,6 +154,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
           isUser: false,
           dayId: selectedDay.id
         });
+        
+        // Принудительный скролл после ответа системы
+        setTimeout(() => scrollToBottom(), 200);
       }
       
       // Уведомляем об обновлении данных если была тренировка или обновились цели
@@ -205,7 +218,8 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
               key={message.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
             >
               <div

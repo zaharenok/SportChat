@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { chatDb, workoutsDb, goalsDb } from '@/lib/redis-db'
+import { chatDb, workoutsDb, goalsDb, achievementsDb } from '@/lib/redis-db'
 import type { Exercise, Goal } from '@/lib/redis-db'
+
+// Функция для получения иконки достижения в зависимости от типа цели
+function getGoalIcon(goalTitle: string): string {
+  const title = goalTitle.toLowerCase()
+  
+  if (title.includes('подтягива') || title.includes('подтянут')) return '💪'
+  if (title.includes('приседа') || title.includes('присест')) return '🦵'
+  if (title.includes('отжима') || title.includes('отжат')) return '💥'
+  if (title.includes('планк')) return '⏱️'
+  if (title.includes('пресс')) return '🔥'
+  if (title.includes('бег') || title.includes('кардио')) return '🏃'
+  if (title.includes('йога') || title.includes('растяжк')) return '🧘'
+  
+  return '🏆' // дефолтная иконка
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,8 +83,18 @@ export async function POST(request: NextRequest) {
       )
       console.log('✅ Workout saved:', workout.id)
 
-      // Обновляем цели
-      await updateGoalsFromExercises(output.parsed_exercises, userId)
+      // Обновляем цели на основе упражнений И частоты тренировок
+      const goalUpdates = await updateGoalsFromExercises(output.parsed_exercises, userId)
+      const frequencyUpdates = await updateFrequencyGoals(userId)
+      
+      // Отправляем сообщения о прогрессе целей
+      const allUpdates = [...goalUpdates, ...frequencyUpdates]
+      if (allUpdates.length > 0) {
+        for (const update of allUpdates) {
+          const goalMessage = await chatDb.create(userId, dayId, update, false)
+          console.log('🎯 Goal progress message saved:', goalMessage.id)
+        }
+      }
     }
 
     // 5. Сохраняем рекомендации если есть
@@ -97,7 +122,9 @@ export async function POST(request: NextRequest) {
 }
 
 // Функция для автоматического обновления целей на основе упражнений
-async function updateGoalsFromExercises(exercises: Exercise[], userId: string) {
+async function updateGoalsFromExercises(exercises: Exercise[], userId: string): Promise<string[]> {
+  const messages: string[] = []
+  
   try {
     console.log("🎯 Checking goals for exercise updates...")
     
@@ -147,6 +174,37 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string) {
             
             console.log(`✅ Goal updated successfully:`, updatedGoal)
             console.log(`📊 Progress: ${newValue}/${goal.target_value} (${Math.round((newValue/goal.target_value)*100)}%)`)
+            
+            // Если цель завершена, создаем достижение и удаляем цель
+            if (newValue >= goal.target_value) {
+              console.log(`🎉 Goal completed! Creating achievement...`)
+              
+              messages.push(`🎉 Цель "${goal.title}" завершена! Поздравляю, ты достиг результата ${goal.target_value} ${goal.unit || 'раз'}!`)
+              
+              try {
+                // Создаем достижение
+                const achievement = await achievementsDb.create(
+                  userId,
+                  `Выполнена цель: ${goal.title}`,
+                  `Успешно завершена цель "${goal.title}" (${goal.target_value} ${goal.unit || 'раз'})`,
+                  getGoalIcon(goal.title)
+                )
+                
+                console.log(`🏆 Achievement created:`, achievement.title)
+                
+                // Удаляем завершенную цель
+                await goalsDb.delete(goal.id)
+                console.log(`🗑️ Completed goal deleted:`, goal.title)
+                
+              } catch (achievementError) {
+                console.error(`❌ Failed to create achievement or delete goal:`, achievementError)
+              }
+            } else {
+              // Цель обновлена, но не завершена
+              const remaining = goal.target_value - newValue
+              const progress = Math.round((newValue / goal.target_value) * 100)
+              messages.push(`🎯 Обновлена цель "${goal.title}": ${newValue}/${goal.target_value} ${goal.unit || 'раз'} (${progress}%). Осталось: ${remaining} ${goal.unit || 'раз'}.`)
+            }
           } catch (error) {
             console.error(`❌ Failed to update goal "${goal.title}":`, error)
           }
@@ -158,4 +216,102 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string) {
   } catch (error) {
     console.error("❌ Error updating goals from exercises:", error)
   }
+  
+  return messages
+}
+
+// Функция для обновления целей по частоте тренировок (например, "Тренироваться 3 раза в неделю")
+async function updateFrequencyGoals(userId: string): Promise<string[]> {
+  const messages: string[] = []
+  
+  try {
+    console.log("📅 Checking frequency goals...")
+    
+    // Получаем все цели пользователя
+    const goals = await goalsDb.getByUser(userId)
+    console.log("📋 User goals:", goals.map((g: Goal) => ({ title: g.title, current: g.current_value, target: g.target_value })))
+    
+    // Получаем все тренировки пользователя
+    const allWorkouts = await workoutsDb.getByUser(userId)
+    
+    // Подсчитываем тренировки за текущую неделю
+    const now = new Date()
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    
+    const weeklyTrainingDays = new Set(
+      allWorkouts
+        .filter(workout => new Date(workout.created_at) >= weekAgo)
+        .map(workout => new Date(workout.created_at).toISOString().split('T')[0])
+    ).size
+    
+    console.log(`📊 Training days this week: ${weeklyTrainingDays}`)
+    
+    // Ищем цели по частоте тренировок
+    for (const goal of goals) {
+      const goalTitle = goal.title.toLowerCase()
+      
+      // Проверяем, является ли цель целью по частоте тренировок
+      const isFrequencyGoal = 
+        (goalTitle.includes("тренирова") && goalTitle.includes("раз") && goalTitle.includes("недел")) ||
+        (goalTitle.includes("заниматься") && goalTitle.includes("раз") && goalTitle.includes("недел")) ||
+        (goalTitle.includes("тренировок") && goalTitle.includes("недел"))
+      
+      console.log(`🔍 Goal "${goal.title}" is frequency goal: ${isFrequencyGoal}`)
+      
+      if (isFrequencyGoal) {
+        const oldValue = goal.current_value
+        const newValue = Math.min(goal.target_value, weeklyTrainingDays)
+        console.log(`📅 Updating frequency goal "${goal.title}": current days = ${newValue}`)
+        
+        // Обновляем только если значение изменилось
+        if (newValue !== oldValue) {
+          try {
+            const updatedGoal = await goalsDb.update(goal.id, {
+              currentValue: newValue,
+              isCompleted: newValue >= goal.target_value
+            })
+            
+            console.log(`✅ Frequency goal updated successfully:`, updatedGoal)
+            console.log(`📊 Progress: ${newValue}/${goal.target_value} training days`)
+            
+            // Если цель завершена, создаем достижение и удаляем цель
+            if (newValue >= goal.target_value) {
+              console.log(`🎉 Frequency goal completed! Creating achievement...`)
+              
+              messages.push(`🎉 Цель "${goal.title}" завершена! Поздравляю, ты тренировался ${goal.target_value} раз в неделю!`)
+              
+              try {
+                const achievement = await achievementsDb.create(
+                  userId,
+                  `Выполнена цель: ${goal.title}`,
+                  `Успешно завершена цель "${goal.title}" (${goal.target_value} тренировок в неделю)`,
+                  '🗓️'
+                )
+                
+                console.log(`🏆 Frequency achievement created:`, achievement.title)
+                
+                // Удаляем завершенную цель
+                await goalsDb.delete(goal.id)
+                console.log(`🗑️ Completed frequency goal deleted:`, goal.title)
+                
+              } catch (achievementError) {
+                console.error(`❌ Failed to create frequency achievement:`, achievementError)
+              }
+            } else {
+              // Цель обновлена, но не завершена
+              const remaining = goal.target_value - newValue
+              const progress = Math.round((newValue / goal.target_value) * 100)
+              messages.push(`📅 Обновлена цель "${goal.title}": ${newValue}/${goal.target_value} тренировок в неделю (${progress}%). Осталось: ${remaining} дней.`)
+            }
+          } catch (error) {
+            console.error(`❌ Failed to update frequency goal "${goal.title}":`, error)
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error updating frequency goals:", error)
+  }
+  
+  return messages
 }

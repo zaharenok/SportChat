@@ -453,5 +453,24 @@ export const achievementsDb = {
   async getByUser(userId: string): Promise<Achievement[]> {
     const achievements = await redisDb.readArray<Achievement>('achievements')
     return achievements.filter(achievement => achievement.user_id === userId)
+  },
+
+  async create(userId: string, title: string, description: string, icon: string = '🏆'): Promise<Achievement> {
+    const achievement: Achievement = {
+      id: utils.generateId(),
+      user_id: userId,
+      title,
+      description,
+      icon,
+      date: utils.getCurrentDate(),
+      created_at: utils.getCurrentTimestamp()
+    }
+
+    const achievements = await redisDb.readArray<Achievement>('achievements')
+    achievements.push(achievement)
+    await redisDb.writeArray('achievements', achievements)
+
+    console.log('🏆 Achievement created:', achievement.title)
+    return achievement
   }
 }
