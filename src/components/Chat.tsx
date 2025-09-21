@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, MessageCircle } from "lucide-react";
+import { Send, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
+import { TypewriterText } from "./TypewriterText";
 
 
 interface ChatProps {
@@ -17,6 +18,8 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const { messages, isLoading, setMessages, sendMessage, addMessage, setLoading } = useChatContext();
   const [inputMessage, setInputMessage] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  const [isNewMessage, setIsNewMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +30,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     if (!selectedDay) {
       setMessages([]);
       setIsInitialized(true);
+      // Очищаем состояния эффекта печатания
+      setTypingMessageId(null);
+      setIsNewMessage(false);
       return;
     }
 
@@ -76,6 +82,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       setMessages([]);
     } finally {
       setIsInitialized(true);
+      // Очищаем состояния эффекта печатания при загрузке истории
+      setTypingMessageId(null);
+      setIsNewMessage(false);
     }
   };
 
@@ -100,6 +109,16 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       scrollToBottom();
     }
   }, [isLoading]);
+
+  // Отслеживание новых сообщений бота для эффекта печатания
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && !lastMessage.isUser && !isLoading && isNewMessage && isInitialized) {
+      // Запускаем эффект печатания только для новых сообщений бота (не из истории)
+      setTypingMessageId(lastMessage.id);
+      setIsNewMessage(false); // Сбрасываем флаг
+    }
+  }, [messages, isLoading, isNewMessage, isInitialized]);
 
   // Дополнительный скролл после загрузки
   useEffect(() => {
@@ -147,13 +166,17 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       // Принудительный скролл после пользовательского сообщения
       setTimeout(() => scrollToBottom(), 100);
       
-      // Добавляем ответ системы
+      // Добавляем ответ системы с эффектом печатания
       if (result.message) {
-        addMessage({
+        const botMessage = {
           text: result.message,
           isUser: false,
           dayId: selectedDay.id
-        });
+        };
+        
+        // Устанавливаем флаг что это новое сообщение для эффекта печатания
+        setIsNewMessage(true);
+        addMessage(botMessage);
         
         // Принудительный скролл после ответа системы
         setTimeout(() => scrollToBottom(), 200);
@@ -230,9 +253,17 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 }`}
                 style={message.isUser ? { background: 'var(--gradient-accent)' } : {}}
               >
-                <p className="whitespace-pre-line text-sm leading-relaxed">
-                  {message.text}
-                </p>
+                <div className="whitespace-pre-line text-sm leading-relaxed">
+                  {!message.isUser && typingMessageId === message.id ? (
+                    <TypewriterText 
+                      text={message.text}
+                      speed={30}
+                      onComplete={() => setTypingMessageId(null)}
+                    />
+                  ) : (
+                    message.text
+                  )}
+                </div>
                 <p className={`text-xs mt-2 opacity-70 ${message.isUser ? "text-white" : "text-primary-500"}`}>
                   {message.timestamp.toLocaleTimeString("ru-RU", {
                     hour: "2-digit",
@@ -251,7 +282,12 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             className="flex justify-start"
           >
             <div className="bg-primary-100 rounded-2xl px-4 py-3 flex items-center space-x-2">
-              <Loader2 className="w-4 h-4 animate-spin text-primary-600" />
+              {/* Анимированные прыгающие точки */}
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
               <span className="text-sm text-primary-600">Печатает...</span>
             </div>
           </motion.div>
