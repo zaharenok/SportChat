@@ -171,11 +171,13 @@ export default function Home() {
           <>
             <div className="w-full h-full">
               {activeTab === "chat" ? (
-                <Chat 
-                  selectedDay={selectedDay} 
-                  selectedUser={currentUser}
-                  onWorkoutSaved={handleWorkoutSaved}
-                />
+                <div className="h-full max-w-7xl mx-auto">
+                  <Chat 
+                    selectedDay={selectedDay} 
+                    selectedUser={currentUser}
+                    onWorkoutSaved={handleWorkoutSaved}
+                  />
+                </div>
               ) : (
                 <div className="h-full max-w-7xl mx-auto overflow-y-auto">
                   <Dashboard 

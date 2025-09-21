@@ -257,7 +257,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                   {!message.isUser && typingMessageId === message.id ? (
                     <TypewriterText 
                       text={message.text}
-                      speed={30}
+                      speed={15}
                       onComplete={() => setTypingMessageId(null)}
                     />
                   ) : (
