@@ -134,9 +134,18 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string): 
     
     for (const exercise of exercises) {
       const exerciseName = exercise.name.toLowerCase()
-      const totalReps = exercise.reps * exercise.sets
       
-      console.log(`🏋️ Processing exercise: ${exerciseName}, total reps: ${totalReps}`)
+      // Определяем тип упражнения и соответствующую единицу измерения
+      const isCardio = exerciseName.includes("ходьб") || exerciseName.includes("прогул") || 
+                      exerciseName.includes("гулял") || exerciseName.includes("шел") || 
+                      exerciseName.includes("идти") || exerciseName.includes("бег") || 
+                      exerciseName.includes("бежал") || exerciseName.includes("пробеж")
+      
+      // Для кардио используем reps как километры, для обычных упражнений - reps * sets
+      const exerciseValue = isCardio ? exercise.reps : exercise.reps * exercise.sets
+      const unit = isCardio ? "км" : "раз"
+      
+      console.log(`🏋️ Processing exercise: ${exerciseName}, value: ${exerciseValue} ${unit} (cardio: ${isCardio})`)
       
       // Ищем подходящие цели
       for (const goal of goals) {
@@ -157,13 +166,19 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string): 
           // Планка
           (exerciseName.includes("планк") && goalTitle.includes("планк")) ||
           // Пресс
-          (exerciseName.includes("пресс") && goalTitle.includes("пресс"))
+          (exerciseName.includes("пресс") && goalTitle.includes("пресс")) ||
+          // Кардио - ходьба/прогулки
+          ((exerciseName.includes("ходьб") || exerciseName.includes("прогул") || exerciseName.includes("гулял") || exerciseName.includes("шел") || exerciseName.includes("идти")) && 
+           (goalTitle.includes("ходьб") || goalTitle.includes("прогул") || goalTitle.includes("проходить") || goalTitle.includes("км"))) ||
+          // Кардио - бег
+          ((exerciseName.includes("бег") || exerciseName.includes("бежал") || exerciseName.includes("пробеж")) && 
+           (goalTitle.includes("бег") || goalTitle.includes("бежать") || goalTitle.includes("пробежать") || goalTitle.includes("км")))
         
         console.log(`🤔 Is matching goal? ${isMatchingGoal}`)
         
         if (isMatchingGoal) {
-          const newValue = Math.min(goal.target_value, goal.current_value + totalReps)
-          console.log(`🎯 Updating goal "${goal.title}": ${goal.current_value} + ${totalReps} = ${newValue}`)
+          const newValue = Math.min(goal.target_value, goal.current_value + exerciseValue)
+          console.log(`🎯 Updating goal "${goal.title}": ${goal.current_value} + ${exerciseValue} = ${newValue}`)
           
           try {
             // Обновляем цель
@@ -175,18 +190,21 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string): 
             console.log(`✅ Goal updated successfully:`, updatedGoal)
             console.log(`📊 Progress: ${newValue}/${goal.target_value} (${Math.round((newValue/goal.target_value)*100)}%)`)
             
+            // Определяем единицу измерения для сообщений
+            const goalUnit = isCardio ? "км" : (goal.unit || 'раз')
+            
             // Если цель завершена, создаем достижение и удаляем цель
             if (newValue >= goal.target_value) {
               console.log(`🎉 Goal completed! Creating achievement...`)
               
-              messages.push(`🎉 Цель "${goal.title}" завершена! Поздравляю, ты достиг результата ${goal.target_value} ${goal.unit || 'раз'}!`)
+              messages.push(`🎉 Цель "${goal.title}" завершена! Поздравляю, ты достиг результата ${goal.target_value} ${goalUnit}!`)
               
               try {
                 // Создаем достижение
                 const achievement = await achievementsDb.create(
                   userId,
                   `Выполнена цель: ${goal.title}`,
-                  `Успешно завершена цель "${goal.title}" (${goal.target_value} ${goal.unit || 'раз'})`,
+                  `Успешно завершена цель "${goal.title}" (${goal.target_value} ${goalUnit})`,
                   getGoalIcon(goal.title)
                 )
                 
@@ -203,7 +221,7 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string): 
               // Цель обновлена, но не завершена
               const remaining = goal.target_value - newValue
               const progress = Math.round((newValue / goal.target_value) * 100)
-              messages.push(`🎯 Обновлена цель "${goal.title}": ${newValue}/${goal.target_value} ${goal.unit || 'раз'} (${progress}%). Осталось: ${remaining} ${goal.unit || 'раз'}.`)
+              messages.push(`🎯 Обновлена цель "${goal.title}": ${newValue}/${goal.target_value} ${goalUnit} (${progress}%). Осталось: ${remaining} ${goalUnit}.`)
             }
           } catch (error) {
             console.error(`❌ Failed to update goal "${goal.title}":`, error)
