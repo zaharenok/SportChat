@@ -215,47 +215,51 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                       const isEditing = editingExercise?.workoutId === workout.id && editingExercise?.exerciseIndex === exerciseIndex;
                       
                       return (
-                        <div key={`${workout.id}-${exerciseIndex}`} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-100 group">
+                        <div key={`${workout.id}-${exerciseIndex}`} className={`py-2 px-3 bg-white rounded-lg border border-gray-100 group ${isEditing ? 'space-y-2' : 'flex items-center justify-between'}`}>
                           {isEditing ? (
                             /* Режим редактирования */
-                            <div className="flex-1 space-y-2">
+                            <div className="flex-1 space-y-3">
                               <input
                                 type="text"
                                 value={editingExercise.name}
                                 onChange={(e) => setEditingExercise({...editingExercise, name: e.target.value})}
-                                className="w-full p-1 text-xs sm:text-sm font-medium text-gray-800 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                className="w-full p-2 text-xs sm:text-sm font-medium text-gray-800 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                 placeholder="Название упражнения"
                               />
-                              <div className="flex items-center space-x-2 text-xs">
-                                <div className="flex items-center space-x-1">
-                                  <span className="font-medium text-gray-600">Вес:</span>
+                              
+                              {/* Адаптивная сетка для мобильных и десктопных экранов */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                <div className="flex flex-col space-y-1">
+                                  <label className="font-medium text-gray-600">Вес (кг)</label>
                                   <input
                                     type="number"
                                     value={editingExercise.weight}
                                     onChange={(e) => setEditingExercise({...editingExercise, weight: parseInt(e.target.value) || 0})}
-                                    className="w-16 p-1 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    className="w-full p-2 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     min="0"
+                                    placeholder="0"
                                   />
-                                  <span className="text-gray-600">кг</span>
                                 </div>
-                                <div className="flex items-center space-x-1">
-                                  <span className="font-medium text-gray-600">Подходы:</span>
+                                <div className="flex flex-col space-y-1">
+                                  <label className="font-medium text-gray-600">Подходы</label>
                                   <input
                                     type="number"
                                     value={editingExercise.sets}
                                     onChange={(e) => setEditingExercise({...editingExercise, sets: parseInt(e.target.value) || 0})}
-                                    className="w-16 p-1 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    className="w-full p-2 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     min="1"
+                                    placeholder="1"
                                   />
                                 </div>
-                                <div className="flex items-center space-x-1">
-                                  <span className="font-medium text-gray-600">Повторы:</span>
+                                <div className="flex flex-col space-y-1">
+                                  <label className="font-medium text-gray-600">Повторы</label>
                                   <input
                                     type="number"
                                     value={editingExercise.reps}
                                     onChange={(e) => setEditingExercise({...editingExercise, reps: parseInt(e.target.value) || 0})}
-                                    className="w-16 p-1 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    className="w-full p-2 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     min="1"
+                                    placeholder="1"
                                   />
                                 </div>
                               </div>
@@ -284,34 +288,38 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                           )}
                           
                           {/* Кнопки управления */}
-                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={handleSaveExercise}
-                                  className="p-1 hover:bg-green-100 rounded text-green-600 hover:text-green-700"
-                                  title="Сохранить"
-                                >
-                                  <Save className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="p-1 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-700"
-                                  title="Отмена"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </>
-                            ) : (
+                          {isEditing ? (
+                            /* Кнопки в режиме редактирования - всегда видимы и увеличены для мобильных */
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-1 sm:space-y-0 sm:space-x-1 mt-2 sm:mt-0">
+                              <button
+                                onClick={handleSaveExercise}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-100 hover:bg-green-200 rounded-lg text-green-700 hover:text-green-800 text-xs font-medium transition-colors"
+                                title="Сохранить"
+                              >
+                                <Save className="w-4 h-4" />
+                                <span className="sm:hidden">Сохранить</span>
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-800 text-xs font-medium transition-colors"
+                                title="Отмена"
+                              >
+                                <X className="w-4 h-4" />
+                                <span className="sm:hidden">Отмена</span>
+                              </button>
+                            </div>
+                          ) : (
+                            /* Кнопка редактирования - показывается при наведении на десктопе, всегда видна на мобильных */
+                            <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleEditExercise(workout.id, exerciseIndex, exercise)}
-                                className="p-1 hover:bg-blue-100 rounded text-blue-600 hover:text-blue-700"
+                                className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 hover:text-blue-700"
                                 title="Редактировать"
                               >
-                                <Edit className="w-3 h-3" />
+                                <Edit className="w-4 h-4" />
                               </button>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })

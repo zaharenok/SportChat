@@ -135,11 +135,11 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
       )
     ).size;
     
-    // Общий прогресс по целям (исправленная логика)
+    // Общий прогресс по целям
     const totalProgress = goals.length > 0 ? Math.round(
       goals.reduce((sum, goal) => {
-        // Цели уменьшаются, поэтому прогресс = (target - current) / target * 100
-        const progress = ((goal.target_value - goal.current_value) / goal.target_value) * 100;
+        // Нормальный прогресс: (current / target) * 100
+        const progress = (goal.current_value / goal.target_value) * 100;
         return sum + Math.max(0, Math.min(progress, 100));
       }, 0) / goals.length
     ) : 0;
@@ -394,7 +394,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
                     <p className="text-sm font-medium text-gray-700">{goal.title}</p>
                     <div className="flex items-center space-x-2">
                       <p className="text-sm text-gray-500">
-                        {goal.current_value}/{goal.target_value} {goal.unit}
+                        {goal.current_value >= goal.target_value ? `Завершено! 🎉` : `${goal.current_value}/${goal.target_value} ${goal.unit}`}
                       </p>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
                         <button
@@ -419,7 +419,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min((goal.current_value / goal.target_value) * 100, 100)}%` }}
                       transition={{ duration: 1, delay: 0.2 }}
-                      className="bg-primary-600 h-2 rounded-full"
+                      className={`h-2 rounded-full ${goal.current_value >= goal.target_value ? 'bg-green-600' : 'bg-primary-600'}`}
                     />
                   </div>
                   {goal.description && (

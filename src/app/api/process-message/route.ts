@@ -135,14 +135,14 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string) {
         console.log(`🤔 Is matching goal? ${isMatchingGoal}`)
         
         if (isMatchingGoal) {
-          const newValue = Math.max(0, goal.current_value - totalReps)
-          console.log(`🎯 Updating goal "${goal.title}": ${goal.current_value} - ${totalReps} = ${newValue}`)
+          const newValue = Math.min(goal.target_value, goal.current_value + totalReps)
+          console.log(`🎯 Updating goal "${goal.title}": ${goal.current_value} + ${totalReps} = ${newValue}`)
           
           try {
             // Обновляем цель
             const updatedGoal = await goalsDb.update(goal.id, {
               currentValue: newValue,
-              isCompleted: newValue <= 0
+              isCompleted: newValue >= goal.target_value
             })
             
             console.log(`✅ Goal updated successfully:`, updatedGoal)

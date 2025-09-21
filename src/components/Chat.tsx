@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
@@ -80,12 +80,26 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Небольшая задержка для завершения анимаций
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ 
+        behavior: "smooth",
+        block: "end",
+        inline: "nearest"
+      });
+    }, 100);
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Дополнительный скролл после загрузки
+  useEffect(() => {
+    if (isInitialized && messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [isInitialized, messages.length]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !selectedDay) return;
@@ -132,9 +146,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         });
       }
       
-      // Уведомляем об обновлении данных если была тренировка
-      if (result.workout_logged && onWorkoutSaved) {
-        console.log('🔄 Notifying about workout save');
+      // Уведомляем об обновлении данных если была тренировка или обновились цели
+      if (onWorkoutSaved && (result.workout_logged || result.parsed_exercises?.length > 0)) {
+        console.log('🔄 Notifying about data update (workout/goals)');
         onWorkoutSaved();
       }
       
@@ -165,9 +179,26 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   }
 
   return (
-    <div className="h-full max-w-4xl mx-auto flex flex-col bg-white rounded-lg shadow-sm border border-primary-200">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4" style={{ minHeight: 0 }}>
+    <div className="h-full flex flex-col">
+      {/* Chat Header - фиксированная панель */}
+      <div className="bg-white rounded-t-lg shadow-sm border border-gray-200 border-b-0">
+        <div className="flex items-center space-x-3 p-4 sm:p-6 border-b border-gray-200">
+          <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-primary-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Чат с тренером</h2>
+            <p className="text-sm text-gray-500">
+              {selectedDay ? `${new Date(selectedDay.date + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })}` : 'Выберите день'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Content - скроллящаяся область */}
+      <div className="flex-1 bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 flex flex-col" style={{ minHeight: 0 }}>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4" style={{ minHeight: 0 }}>
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -247,6 +278,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             <Send className="w-5 h-5" />
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
