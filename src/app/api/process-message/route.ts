@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
     const webhookData = await webhookResponse.json()
     console.log('🎯 Webhook response:', webhookData)
 
-    const output = webhookData.output
+    // Webhook возвращает массив, берем первый элемент
+    const firstResponse = Array.isArray(webhookData) ? webhookData[0] : webhookData
+    const output = firstResponse?.output
     if (!output) {
       throw new Error('Invalid webhook response structure')
     }
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ Workout saved:', workout.id)
 
       // Обновляем цели на основе упражнений И частоты тренировок
-      const goalUpdates = await updateGoalsFromExercises(output.parsed_exercises, userId)
+      const goalUpdates = await updateGoalsFromExercises(output.parsed_exercises, userId, message)
       const frequencyUpdates = await updateFrequencyGoals(userId)
       
       // Отправляем сообщения о прогрессе целей
@@ -98,10 +100,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Сохраняем рекомендации если есть
+    console.log('🔍 Checking suggestions:', {
+      hasSuggestions: !!output.suggestions,
+      suggestionsCount: output.suggestions?.length || 0,
+      suggestions: output.suggestions
+    })
+    
     if (output.suggestions && output.suggestions.length > 0) {
       const suggestionsText = "💡 Рекомендации:\n" + output.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n")
+      console.log('💡 Creating suggestions message:', suggestionsText)
       const suggestionsMessage = await chatDb.create(userId, dayId, suggestionsText, false)
       console.log('💡 Suggestions saved:', suggestionsMessage.id)
+    } else {
+      console.log('⚠️ No suggestions to save')
     }
 
     return NextResponse.json({
@@ -122,7 +133,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Функция для автоматического обновления целей на основе упражнений
-async function updateGoalsFromExercises(exercises: Exercise[], userId: string): Promise<string[]> {
+async function updateGoalsFromExercises(exercises: Exercise[], userId: string, originalMessage: string): Promise<string[]> {
   const messages: string[] = []
   
   try {
@@ -142,7 +153,23 @@ async function updateGoalsFromExercises(exercises: Exercise[], userId: string): 
                       exerciseName.includes("бежал") || exerciseName.includes("пробеж")
       
       // Для кардио используем reps как километры, для обычных упражнений - reps * sets
-      const exerciseValue = isCardio ? exercise.reps : exercise.reps * exercise.sets
+      let exerciseValue = isCardio ? exercise.reps : exercise.reps * exercise.sets
+      
+      // ФОЛЛБЭК: Если кардио упражнение и reps = 1, пытаемся извлечь расстояние из исходного сообщения
+      if (isCardio && exercise.reps === 1) {
+        console.log(`⚠️ Cardio exercise "${exerciseName}" has reps=1, parsing distance from: "${originalMessage}"`)
+        
+        // Ищем числа с км в исходном сообщении
+        const distanceMatch = originalMessage.toLowerCase().match(/(\d+(?:\.\d+)?)\s*км/);
+        if (distanceMatch) {
+          const parsedDistance = parseFloat(distanceMatch[1]);
+          console.log(`✅ Found distance in message: ${parsedDistance} км`);
+          exerciseValue = parsedDistance;
+        } else {
+          console.log(`❌ Could not parse distance from message, using default: ${exerciseValue} км`);
+        }
+      }
+      
       const unit = isCardio ? "км" : "раз"
       
       console.log(`🏋️ Processing exercise: ${exerciseName}, value: ${exerciseValue} ${unit} (cardio: ${isCardio})`)

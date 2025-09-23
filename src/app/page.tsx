@@ -143,10 +143,10 @@ export default function Home() {
 
   return (
     <ChatProvider>
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div className="h-screen flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <main className="flex-1 px-4 py-4 overflow-hidden">
+        <main className={`flex-1 overflow-hidden ${activeTab === "chat" ? "" : "px-4 py-4"}`}>
         {activeTab === "profile" ? (
           /* Полноэкранный профиль */
           <div className="max-w-2xl mx-auto h-full overflow-y-auto">
@@ -171,7 +171,7 @@ export default function Home() {
           <>
             <div className="w-full h-full">
               {activeTab === "chat" ? (
-                <div className="h-full max-w-7xl mx-auto">
+                <div className="h-full w-full sm:max-w-7xl sm:mx-auto sm:px-4 sm:py-4">
                   <Chat 
                     selectedDay={selectedDay} 
                     selectedUser={currentUser}

@@ -217,7 +217,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Chat Header - фиксированная панель */}
-      <div className="bg-white rounded-t-lg shadow-sm border border-gray-200 border-b-0">
+      <div className="bg-white sm:rounded-t-lg sm:shadow-sm sm:border sm:border-gray-200 sm:border-b-0">
         <div className="flex items-center space-x-3 p-4 sm:p-6 border-b border-gray-200">
           <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
             <MessageCircle className="w-5 h-5 text-primary-600" />
@@ -232,7 +232,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       </div>
 
       {/* Chat Content - скроллящаяся область */}
-      <div className="flex-1 bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 flex flex-col" style={{ minHeight: 0 }}>
+      <div className="flex-1 bg-white sm:rounded-b-lg sm:shadow-sm sm:border sm:border-gray-200 sm:border-t-0 flex flex-col" style={{ minHeight: 0 }}>
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4" style={{ minHeight: 0 }}>
         <AnimatePresence>
