@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Проверяем, что переданы только валидные поля
-    const updates: any = {}
+    const updates: Partial<{ show_suggestions: boolean; show_next_workout_recommendation: boolean }> = {}
     if (typeof show_suggestions === 'boolean') {
       updates.show_suggestions = show_suggestions
     }

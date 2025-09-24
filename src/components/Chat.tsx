@@ -7,6 +7,22 @@ import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
 import { TypewriterText } from "./TypewriterText";
 
+// Интерфейс для ответа API
+interface ApiResponse {
+  success: boolean;
+  message?: string;
+  suggestions?: string;
+  next_workout_recommendation?: string;
+  workout_logged?: boolean;
+  parsed_exercises?: Array<{
+    name: string;
+    weight: number;
+    sets: number;
+    reps: number;
+  }>;
+  recognizedText?: string;
+}
+
 
 interface ChatProps {
   selectedDay: Day | null;
@@ -108,6 +124,96 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     }, 100);
   };
 
+  // Функция для обработки последовательности сообщений с задержками
+  const processMessageSequence = (result: ApiResponse, recognizedText?: string) => {
+    let currentDelay = 0;
+    
+    // Добавляем распознанный текст от пользователя для аудио сообщений
+    if (recognizedText) {
+      addMessage({
+        text: recognizedText,
+        isUser: true,
+        dayId: selectedDay!.id
+      });
+      setTimeout(() => scrollToBottom(), 100);
+    }
+    
+    // 1. Основной ответ системы (сразу)
+    if (result.message) {
+      setTimeout(() => {
+        console.log('🤖 Adding main response to chat');
+        const botMessage = {
+          text: result.message!,
+          isUser: false,
+          dayId: selectedDay!.id
+        };
+        
+        setIsNewMessage(true);
+        addMessage(botMessage);
+        
+        // Плавный скролл после основного ответа
+        setTimeout(() => scrollToBottom(), 300);
+      }, currentDelay);
+      currentDelay += 4000; // 4 секунды для следующего сообщения
+    }
+    
+    // 2. Сообщения об обновлении целей (через 4 секунды после основного ответа)
+    if (result.workout_logged && result.parsed_exercises && result.parsed_exercises.length > 0) {
+      setTimeout(() => {
+        console.log('🎯 Adding goal updates to chat');
+        const goalUpdateMessage = {
+          text: "🎯 Проверяю обновления ваших целей...",
+          isUser: false,
+          dayId: selectedDay!.id
+        };
+        
+        setIsNewMessage(true);
+        addMessage(goalUpdateMessage);
+        
+        // Плавный скролл после сообщения о целях
+        setTimeout(() => scrollToBottom(), 300);
+      }, currentDelay);
+      currentDelay += 4000; // 4 секунды для следующего сообщения
+    }
+    
+    // 3. Рекомендации (через 4 секунды после предыдущего)
+    if (result.suggestions) {
+      setTimeout(() => {
+        console.log('💡 Adding suggestions to chat:', result.suggestions);
+        const suggestionsMessage = {
+          text: result.suggestions!,
+          isUser: false,
+          dayId: selectedDay!.id
+        };
+        
+        setIsNewMessage(true);
+        addMessage(suggestionsMessage);
+        
+        // Плавный скролл после рекомендаций
+        setTimeout(() => scrollToBottom(), 300);
+      }, currentDelay);
+      currentDelay += 4000; // 4 секунды для следующего сообщения
+    }
+    
+    // 4. Следующая тренировка (через 4 секунды после предыдущего)
+    if (result.next_workout_recommendation) {
+      setTimeout(() => {
+        console.log('🏋️ Adding next workout to chat:', result.next_workout_recommendation);
+        const nextWorkoutMessage = {
+          text: result.next_workout_recommendation!,
+          isUser: false,
+          dayId: selectedDay!.id
+        };
+        
+        setIsNewMessage(true);
+        addMessage(nextWorkoutMessage);
+        
+        // Плавный скролл после следующей тренировки
+        setTimeout(() => scrollToBottom(), 300);
+      }, currentDelay);
+    }
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -175,46 +281,11 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       // Принудительный скролл после пользовательского сообщения
       setTimeout(() => scrollToBottom(), 100);
       
-      // Добавляем ответ системы с эффектом печатания
-      if (result.message) {
-        const botMessage = {
-          text: result.message,
-          isUser: false,
-          dayId: selectedDay.id
-        };
-        
-        // Устанавливаем флаг что это новое сообщение для эффекта печатания
-        setIsNewMessage(true);
-        addMessage(botMessage);
-        
-        // Принудительный скролл после ответа системы
-        setTimeout(() => scrollToBottom(), 200);
-      }
-      
-      // Добавляем рекомендации если есть
-      if (result.suggestions) {
-        setTimeout(() => {
-          console.log('💡 Adding suggestions to chat:', result.suggestions);
-          const suggestionsMessage = {
-            text: result.suggestions,
-            isUser: false,
-            dayId: selectedDay.id
-          };
-          
-          // Устанавливаем флаг для эффекта печатания рекомендаций
-          setIsNewMessage(true);
-          addMessage(suggestionsMessage);
-          
-          // Скролл после добавления рекомендаций (увеличенная задержка для надежности)
-          setTimeout(() => {
-            console.log('📜 Scrolling to bottom after suggestions');
-            scrollToBottom();
-          }, 500);
-        }, 1000); // Небольшая задержка после основного ответа
-      }
+      // Используем новую функцию для обработки последовательности сообщений
+      processMessageSequence(result);
       
       // Уведомляем об обновлении данных если была тренировка или обновились цели
-      if (onWorkoutSaved && (result.workout_logged || result.parsed_exercises?.length > 0)) {
+      if (onWorkoutSaved && (result.workout_logged || (result.parsed_exercises && result.parsed_exercises.length > 0))) {
         console.log('🔄 Notifying about data update (workout/goals)');
         onWorkoutSaved();
       }
@@ -304,40 +375,15 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       const result = await response.json();
       console.log('✅ Audio processed successfully:', result);
       
-      // Добавляем ответ системы с эффектом печатания
-      if (result.message) {
-        setIsNewMessage(true);
-        addMessage({
-          text: result.message,
-          isUser: false,
-          dayId: selectedDay.id
-        });
-      }
+      // Для аудио сообщений извлекаем распознанный текст из ответа
+      // Предполагаем, что webhook возвращает распознанный текст в поле recognizedText
+      const recognizedText = result.recognizedText || "🎤 [Голосовое сообщение обработано]";
       
-      // Добавляем рекомендации если есть
-      if (result.suggestions) {
-        setTimeout(() => {
-          console.log('💡 Adding suggestions to chat:', result.suggestions);
-          const suggestionsMessage = {
-            text: result.suggestions,
-            isUser: false,
-            dayId: selectedDay.id
-          };
-          
-          // Устанавливаем флаг для эффекта печатания рекомендаций
-          setIsNewMessage(true);
-          addMessage(suggestionsMessage);
-          
-          // Скролл после добавления рекомендаций (увеличенная задержка для надежности)
-          setTimeout(() => {
-            console.log('📜 Scrolling to bottom after suggestions');
-            scrollToBottom();
-          }, 500);
-        }, 1000); // Небольшая задержка после основного ответа
-      }
+      // Используем новую функцию для обработки последовательности сообщений с распознанным текстом
+      processMessageSequence(result, recognizedText);
       
       // Уведомляем об обновлении данных
-      if (onWorkoutSaved && (result.workout_logged || result.parsed_exercises?.length > 0)) {
+      if (onWorkoutSaved && (result.workout_logged || (result.parsed_exercises && result.parsed_exercises.length > 0))) {
         onWorkoutSaved();
       }
       
