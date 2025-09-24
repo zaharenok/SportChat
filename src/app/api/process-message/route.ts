@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { chatDb, workoutsDb, goalsDb, achievementsDb } from '@/lib/redis-db'
+import { chatDb, workoutsDb, goalsDb, achievementsDb, usersDb } from '@/lib/redis-db'
 import type { Exercise, Goal } from '@/lib/redis-db'
 
 // Функция для получения иконки достижения в зависимости от типа цели
@@ -57,11 +57,20 @@ export async function POST(request: NextRequest) {
       console.log('📨 Processing text message:', { userId, dayId, message });
     }
 
-    // 1. Сохраняем пользовательское сообщение
+    // 1. Получаем данные пользователя
+    const user = await usersDb.getById(userId)
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'User not found' 
+      }, { status: 404 })
+    }
+    console.log('👤 User data retrieved:', { id: user.id, email: user.email, name: user.name })
+
+    // 2. Сохраняем пользовательское сообщение
     const userMessage = await chatDb.create(userId, dayId, message, true)
     console.log('💾 User message saved:', userMessage.id)
 
-    // 2. Вызываем webhook для обработки сообщения
+    // 3. Вызываем webhook для обработки сообщения
     const webhookUrl = process.env.WEBHOOK_URL
     if (!webhookUrl) {
       throw new Error('Webhook URL not configured')
@@ -74,13 +83,20 @@ export async function POST(request: NextRequest) {
       const webhookFormData = new FormData();
       webhookFormData.append('audio', audioFile);
       webhookFormData.append('message', message);
-      webhookFormData.append('user_email', "test@example.com"); // TODO: получать из пользователя
-      webhookFormData.append('user_name', "Тестовый пользователь"); // TODO: получать из пользователя
+      webhookFormData.append('user_email', user.email);
+      webhookFormData.append('user_name', user.name);
+      webhookFormData.append('user_id', user.id);
+      webhookFormData.append('language', 'ru'); // Язык пользователя
       webhookFormData.append('isAudio', 'true');
       
       webhookResponse = await fetch(webhookUrl, {
         method: "POST",
-        body: webhookFormData
+        body: webhookFormData,
+        headers: {
+          // Добавляем заголовки безопасности
+          'User-Agent': 'SportChat/1.0',
+          'X-Request-Source': 'SportChat-App'
+        }
       });
     } else {
       // Отправляем обычное сообщение как JSON
@@ -89,11 +105,16 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
+          // Добавляем заголовки безопасности
+          'User-Agent': 'SportChat/1.0',
+          'X-Request-Source': 'SportChat-App'
         },
         body: JSON.stringify({
           message,
-          user_email: "test@example.com", // TODO: получать из пользователя
-          user_name: "Тестовый пользователь", // TODO: получать из пользователя
+          user_email: user.email,
+          user_name: user.name,
+          user_id: user.id,
+          language: 'ru', // Язык пользователя
           isAudio: false
         }),
       });
@@ -113,13 +134,13 @@ export async function POST(request: NextRequest) {
       throw new Error('Invalid webhook response structure')
     }
 
-    // 3. Сохраняем ответ системы
+    // 4. Сохраняем ответ системы
     if (output.message) {
       const botMessage = await chatDb.create(userId, dayId, output.message, false)
       console.log('🤖 Bot message saved:', botMessage.id)
     }
 
-    // 4. Обрабатываем тренировку и обновляем цели
+    // 5. Обрабатываем тренировку и обновляем цели
     if (output.workout_logged && output.parsed_exercises && output.parsed_exercises.length > 0) {
       console.log('🏋️ Processing workout:', output.parsed_exercises)
       
@@ -146,7 +167,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Сохраняем рекомендации если есть
+    // 6. Сохраняем рекомендации если есть
     console.log('🔍 Checking suggestions:', {
       hasSuggestions: !!output.suggestions,
       suggestionsCount: output.suggestions?.length || 0,

@@ -321,6 +321,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
           // Устанавливаем флаг для эффекта печатания рекомендаций
           setIsNewMessage(true);
           addMessage(suggestionsMessage);
+          
+          // Скролл после добавления рекомендаций
+          setTimeout(() => scrollToBottom(), 200);
         }, 1000); // Небольшая задержка после основного ответа
       }
       
