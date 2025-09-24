@@ -95,13 +95,16 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   };
 
   const scrollToBottom = () => {
-    // Простой плавный скролл
+    // Плавный скролл с дополнительными проверками
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ 
-        behavior: "smooth",
-        block: "end",
-        inline: "nearest"
-      });
+      if (messagesEndRef.current) {
+        console.log('🔄 Executing scroll to bottom');
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: "smooth",
+          block: "end",
+          inline: "nearest"
+        });
+      }
     }, 100);
   };
 
@@ -202,8 +205,11 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
           setIsNewMessage(true);
           addMessage(suggestionsMessage);
           
-          // Скролл после добавления рекомендаций
-          setTimeout(() => scrollToBottom(), 200);
+          // Скролл после добавления рекомендаций (увеличенная задержка для надежности)
+          setTimeout(() => {
+            console.log('📜 Scrolling to bottom after suggestions');
+            scrollToBottom();
+          }, 500);
         }, 1000); // Небольшая задержка после основного ответа
       }
       
@@ -322,8 +328,11 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
           setIsNewMessage(true);
           addMessage(suggestionsMessage);
           
-          // Скролл после добавления рекомендаций
-          setTimeout(() => scrollToBottom(), 200);
+          // Скролл после добавления рекомендаций (увеличенная задержка для надежности)
+          setTimeout(() => {
+            console.log('📜 Scrolling to bottom after suggestions');
+            scrollToBottom();
+          }, 500);
         }, 1000); // Небольшая задержка после основного ответа
       }
       

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chatDb, workoutsDb, goalsDb, achievementsDb, usersDb } from '@/lib/redis-db'
 import type { Exercise, Goal } from '@/lib/redis-db'
+import { chatSettingsDb } from '@/lib/chat-settings-db'
 
 // Функция для получения иконки достижения в зависимости от типа цели
 function getGoalIcon(goalTitle: string): string {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       console.log('📨 Processing text message:', { userId, dayId, message });
     }
 
-    // 1. Получаем данные пользователя
+    // 1. Получаем данные пользователя и его настройки чата
     const user = await usersDb.getById(userId)
     if (!user) {
       return NextResponse.json({ 
@@ -65,6 +66,13 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
     console.log('👤 User data retrieved:', { id: user.id, email: user.email, name: user.name })
+    
+    // Получаем настройки чата пользователя
+    const chatSettings = await chatSettingsDb.getOrCreate(userId)
+    console.log('⚙️ Chat settings:', { 
+      show_suggestions: chatSettings.show_suggestions,
+      show_next_workout_recommendation: chatSettings.show_next_workout_recommendation
+    })
 
     // 2. Сохраняем пользовательское сообщение
     const userMessage = await chatDb.create(userId, dayId, message, true)
@@ -175,13 +183,34 @@ export async function POST(request: NextRequest) {
     })
     
     let suggestionsMessage = null;
-    if (output.suggestions && output.suggestions.length > 0) {
+    if (output.suggestions && output.suggestions.length > 0 && chatSettings.show_suggestions) {
       const suggestionsText = "💡 Рекомендации:\n" + output.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n")
       console.log('💡 Creating suggestions message:', suggestionsText)
       suggestionsMessage = await chatDb.create(userId, dayId, suggestionsText, false)
       console.log('💡 Suggestions saved:', suggestionsMessage.id)
+    } else if (!chatSettings.show_suggestions) {
+      console.log('⚙️ Suggestions disabled by user settings')
     } else {
       console.log('⚠️ No suggestions to save')
+    }
+
+    // 7. Сохраняем рекомендации следующей тренировки если есть
+    console.log('🏋️ Checking next workout recommendation:', {
+      hasNextWorkout: !!output.next_workout_recommendation,
+      nextWorkoutRecommendation: output.next_workout_recommendation,
+      showNextWorkout: chatSettings.show_next_workout_recommendation
+    })
+    
+    let nextWorkoutMessage = null;
+    if (output.next_workout_recommendation && chatSettings.show_next_workout_recommendation) {
+      const nextWorkoutText = "🎯 Следующая тренировка:\n" + output.next_workout_recommendation
+      console.log('🏋️ Creating next workout message:', nextWorkoutText)
+      nextWorkoutMessage = await chatDb.create(userId, dayId, nextWorkoutText, false)
+      console.log('🏋️ Next workout saved:', nextWorkoutMessage.id)
+    } else if (!chatSettings.show_next_workout_recommendation) {
+      console.log('⚙️ Next workout recommendations disabled by user settings')
+    } else {
+      console.log('⚠️ No next workout recommendation to save')
     }
 
     return NextResponse.json({
@@ -190,7 +219,8 @@ export async function POST(request: NextRequest) {
       workout_logged: output.workout_logged,
       parsed_exercises: output.parsed_exercises || [],
       message: output.message,
-      suggestions: suggestionsMessage ? suggestionsMessage.message : null
+      suggestions: suggestionsMessage ? suggestionsMessage.message : null,
+      next_workout_recommendation: nextWorkoutMessage ? nextWorkoutMessage.message : null
     })
 
   } catch (error) {

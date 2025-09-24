@@ -69,6 +69,15 @@ export interface Achievement {
   created_at: string
 }
 
+export interface ChatSettings {
+  id: string
+  user_id: string
+  show_suggestions: boolean
+  show_next_workout_recommendation: boolean
+  created_at: string
+  updated_at: string
+}
+
 // Утилиты
 export const utils = {
   generateId: () => Math.random().toString(36).substr(2, 9),
