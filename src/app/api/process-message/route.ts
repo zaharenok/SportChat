@@ -19,15 +19,43 @@ function getGoalIcon(goalTitle: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, dayId, message } = await request.json()
+    let userId: string, dayId: string, message: string = '', audioFile: File | null = null, isAudio: boolean = false;
     
-    if (!userId || !dayId || !message) {
-      return NextResponse.json({ 
-        error: 'userId, dayId, and message are required' 
-      }, { status: 400 })
+    // Проверяем тип контента - JSON или FormData
+    const contentType = request.headers.get('content-type') || '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Обрабатываем FormData (аудио)
+      const formData = await request.formData();
+      userId = formData.get('userId') as string;
+      dayId = formData.get('dayId') as string;
+      audioFile = formData.get('audio') as File;
+      isAudio = formData.get('isAudio') === 'true';
+      
+      if (!userId || !dayId || !audioFile) {
+        return NextResponse.json({ 
+          error: 'userId, dayId, and audio are required for audio messages' 
+        }, { status: 400 })
+      }
+      
+      message = `🎤 Голосовое сообщение (${Math.round(audioFile.size / 1024)}KB)`;
+      console.log('📨 Processing audio message:', { userId, dayId, audioSize: audioFile.size, isAudio });
+      
+    } else {
+      // Обрабатываем JSON (обычные сообщения)
+      const body = await request.json();
+      userId = body.userId;
+      dayId = body.dayId;
+      message = body.message;
+      
+      if (!userId || !dayId || !message) {
+        return NextResponse.json({ 
+          error: 'userId, dayId, and message are required' 
+        }, { status: 400 })
+      }
+      
+      console.log('📨 Processing text message:', { userId, dayId, message });
     }
-
-    console.log('📨 Processing message:', { userId, dayId, message })
 
     // 1. Сохраняем пользовательское сообщение
     const userMessage = await chatDb.create(userId, dayId, message, true)
@@ -39,18 +67,37 @@ export async function POST(request: NextRequest) {
       throw new Error('Webhook URL not configured')
     }
 
-    const webhookResponse = await fetch(webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        message,
-        user_email: "test@example.com", // TODO: получать из пользователя
-        user_name: "Тестовый пользователь", // TODO: получать из пользователя
-      }),
-    })
+    let webhookResponse: Response;
+    
+    if (isAudio && audioFile) {
+      // Отправляем аудио файл в webhook как FormData
+      const webhookFormData = new FormData();
+      webhookFormData.append('audio', audioFile);
+      webhookFormData.append('message', message);
+      webhookFormData.append('user_email', "test@example.com"); // TODO: получать из пользователя
+      webhookFormData.append('user_name', "Тестовый пользователь"); // TODO: получать из пользователя
+      webhookFormData.append('isAudio', 'true');
+      
+      webhookResponse = await fetch(webhookUrl, {
+        method: "POST",
+        body: webhookFormData
+      });
+    } else {
+      // Отправляем обычное сообщение как JSON
+      webhookResponse = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          user_email: "test@example.com", // TODO: получать из пользователя
+          user_name: "Тестовый пользователь", // TODO: получать из пользователя
+          isAudio: false
+        }),
+      });
+    }
 
     if (!webhookResponse.ok) {
       throw new Error(`Webhook failed: ${webhookResponse.status}`)
@@ -106,10 +153,11 @@ export async function POST(request: NextRequest) {
       suggestions: output.suggestions
     })
     
+    let suggestionsMessage = null;
     if (output.suggestions && output.suggestions.length > 0) {
       const suggestionsText = "💡 Рекомендации:\n" + output.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n")
       console.log('💡 Creating suggestions message:', suggestionsText)
-      const suggestionsMessage = await chatDb.create(userId, dayId, suggestionsText, false)
+      suggestionsMessage = await chatDb.create(userId, dayId, suggestionsText, false)
       console.log('💡 Suggestions saved:', suggestionsMessage.id)
     } else {
       console.log('⚠️ No suggestions to save')
@@ -120,7 +168,8 @@ export async function POST(request: NextRequest) {
       userMessage,
       workout_logged: output.workout_logged,
       parsed_exercises: output.parsed_exercises || [],
-      message: output.message
+      message: output.message,
+      suggestions: suggestionsMessage ? suggestionsMessage.message : null
     })
 
   } catch (error) {

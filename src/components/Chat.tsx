@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, MessageCircle } from "lucide-react";
+import { Send, MessageCircle, Mic, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
@@ -20,6 +20,12 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [isNewMessage, setIsNewMessage] = useState(false);
+  
+  // Аудио запись состояния
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -182,6 +188,25 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         setTimeout(() => scrollToBottom(), 200);
       }
       
+      // Добавляем рекомендации если есть
+      if (result.suggestions) {
+        setTimeout(() => {
+          console.log('💡 Adding suggestions to chat:', result.suggestions);
+          const suggestionsMessage = {
+            text: result.suggestions,
+            isUser: false,
+            dayId: selectedDay.id
+          };
+          
+          // Устанавливаем флаг для эффекта печатания рекомендаций
+          setIsNewMessage(true);
+          addMessage(suggestionsMessage);
+          
+          // Скролл после добавления рекомендаций
+          setTimeout(() => scrollToBottom(), 200);
+        }, 1000); // Небольшая задержка после основного ответа
+      }
+      
       // Уведомляем об обновлении данных если была тренировка или обновились цели
       if (onWorkoutSaved && (result.workout_logged || result.parsed_exercises?.length > 0)) {
         console.log('🔄 Notifying about data update (workout/goals)');
@@ -194,6 +219,125 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       await sendMessage(messageText, selectedUser.id, selectedDay.id, onWorkoutSaved, selectedUser.email, selectedUser.name);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Функции для работы с аудио записью
+  const startRecording = async () => {
+    try {
+      console.log('🎤 Starting audio recording...');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      const chunks: Blob[] = [];
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+      
+      recorder.onstop = () => {
+        console.log('🎤 Recording stopped, processing audio...');
+        setIsRecording(false);
+        setIsProcessingAudio(true);
+        
+        const audioBlob = new Blob(chunks, { type: 'audio/wav' });
+        handleAudioMessage(audioBlob);
+        
+        // Останавливаем все треки
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      
+      recorder.start();
+      console.log('🎤 Recording started');
+      
+    } catch (error) {
+      console.error('❌ Error starting recording:', error);
+      alert('Не удалось получить доступ к микрофону. Проверьте разрешения.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      console.log('🎤 Stopping recording...');
+      mediaRecorder.stop();
+    }
+  };
+
+  const handleAudioMessage = async (audioBlob: Blob) => {
+    if (!selectedDay) {
+      setIsProcessingAudio(false);
+      return;
+    }
+
+    try {
+      console.log('🎵 Processing audio message, size:', audioBlob.size);
+      
+      // Создаем FormData для отправки аудио файла
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-message.wav');
+      formData.append('userId', selectedUser.id);
+      formData.append('dayId', selectedDay.id);
+      formData.append('isAudio', 'true'); // Флаг что это аудио сообщение
+      
+      console.log('📤 Sending audio to webhook...');
+      
+      const response = await fetch('/api/process-message', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Audio processed successfully:', result);
+      
+      // Добавляем ответ системы с эффектом печатания
+      if (result.message) {
+        setIsNewMessage(true);
+        addMessage({
+          text: result.message,
+          isUser: false,
+          dayId: selectedDay.id
+        });
+      }
+      
+      // Добавляем рекомендации если есть
+      if (result.suggestions) {
+        setTimeout(() => {
+          console.log('💡 Adding suggestions to chat:', result.suggestions);
+          const suggestionsMessage = {
+            text: result.suggestions,
+            isUser: false,
+            dayId: selectedDay.id
+          };
+          
+          // Устанавливаем флаг для эффекта печатания рекомендаций
+          setIsNewMessage(true);
+          addMessage(suggestionsMessage);
+        }, 1000); // Небольшая задержка после основного ответа
+      }
+      
+      // Уведомляем об обновлении данных
+      if (onWorkoutSaved && (result.workout_logged || result.parsed_exercises?.length > 0)) {
+        onWorkoutSaved();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error processing audio:', error);
+      addMessage({
+        text: 'Извините, не удалось обработать голосовое сообщение. Попробуйте еще раз.',
+        isUser: false,
+        dayId: selectedDay.id
+      });
+    } finally {
+      setIsProcessingAudio(false);
     }
   };
 
@@ -292,6 +436,46 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             </div>
           </motion.div>
         )}
+        
+        {isProcessingAudio && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex justify-start"
+          >
+            <div className="bg-blue-100 rounded-2xl px-4 py-3 flex items-center space-x-3">
+              {/* Звуковые волны анимация */}
+              <div className="flex items-center space-x-1">
+                <motion.div
+                  className="w-1 bg-blue-600 rounded-full"
+                  animate={{ height: [4, 12, 4] }}
+                  transition={{ repeat: Infinity, duration: 0.8, delay: 0 }}
+                />
+                <motion.div
+                  className="w-1 bg-blue-600 rounded-full"
+                  animate={{ height: [4, 16, 4] }}
+                  transition={{ repeat: Infinity, duration: 0.8, delay: 0.1 }}
+                />
+                <motion.div
+                  className="w-1 bg-blue-600 rounded-full"
+                  animate={{ height: [4, 10, 4] }}
+                  transition={{ repeat: Infinity, duration: 0.8, delay: 0.2 }}
+                />
+                <motion.div
+                  className="w-1 bg-blue-600 rounded-full"
+                  animate={{ height: [4, 14, 4] }}
+                  transition={{ repeat: Infinity, duration: 0.8, delay: 0.3 }}
+                />
+                <motion.div
+                  className="w-1 bg-blue-600 rounded-full"
+                  animate={{ height: [4, 8, 4] }}
+                  transition={{ repeat: Infinity, duration: 0.8, delay: 0.4 }}
+                />
+              </div>
+              <span className="text-sm text-blue-600">🎤 Распознаю речь...</span>
+            </div>
+          </motion.div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -319,9 +503,26 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
               }}
             />
           </div>
+          
+          {/* Кнопка записи аудио */}
+          <motion.button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isLoading || isProcessingAudio}
+            className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-white rounded-2xl transition-all ${
+              isRecording 
+                ? 'bg-red-500 hover:bg-red-600' 
+                : 'bg-blue-500 hover:bg-blue-600'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            animate={isRecording ? { scale: [1, 1.1, 1] } : {}}
+            transition={{ repeat: isRecording ? Infinity : 0, duration: 1 }}
+          >
+            {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-5 h-5" />}
+          </motion.button>
+          
+          {/* Кнопка отправки текста */}
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={!inputMessage.trim() || isLoading || isRecording || isProcessingAudio}
             className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             style={{ background: 'var(--gradient-accent)' }}
           >
