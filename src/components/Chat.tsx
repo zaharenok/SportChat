@@ -23,6 +23,36 @@ interface ApiResponse {
   recognizedText?: string;
 }
 
+// Интерфейсы для разных форматов webhook ответов
+interface WebhookResponseAudio {
+  text: string;
+  usage: {
+    type: string;
+    seconds: number;
+  };
+}
+
+interface WebhookResponseMain {
+  output: {
+    message: string;
+    workout_logged?: boolean;
+    parsed_exercises?: Array<{
+      name: string;
+      weight: number;
+      sets: number;
+      reps: number;
+    }>;
+    suggestions?: string | string[];
+    next_workout_recommendation?: string;
+  };
+}
+
+// Общий тип для webhook ответа
+type WebhookResponse = 
+  | WebhookResponseAudio[] 
+  | WebhookResponseMain[] 
+  | ApiResponse  // Fallback на старый формат
+
 
 interface ChatProps {
   selectedDay: Day | null;
@@ -108,6 +138,58 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       setTypingMessageId(null);
       setIsNewMessage(false);
     }
+  };
+
+  // Функция для парсинга разных форматов ответов от webhook
+  const parseWebhookResponse = (data: WebhookResponse): ApiResponse => {
+    // Если пришел массив ответов
+    if (Array.isArray(data)) {
+      // Первый элемент может быть Response audio с распознанным текстом
+      const firstItem = data[0];
+      
+      // Проверяем на Response audio формат
+      if (firstItem && 'text' in firstItem && 'usage' in firstItem) {
+        const audioItem = firstItem as WebhookResponseAudio;
+        console.log('🎤 Found Response audio format:', audioItem.text);
+        return {
+          success: true,
+          recognizedText: audioItem.text,
+          message: audioItem.text, // Используем как основное сообщение
+          suggestions: undefined,
+          next_workout_recommendation: undefined,
+          workout_logged: false,
+          parsed_exercises: []
+        };
+      }
+      
+      // Проверяем на основной формат ответа
+      if (firstItem && 'output' in firstItem) {
+        const mainItem = firstItem as WebhookResponseMain;
+        const output = mainItem.output;
+        console.log('📋 Found main response format:', output);
+        return {
+          success: true,
+          recognizedText: undefined, // В основном ответе может не быть распознанного текста
+          message: output.message,
+          suggestions: Array.isArray(output.suggestions) ? output.suggestions.join('\n\n') : output.suggestions,
+          next_workout_recommendation: output.next_workout_recommendation,
+          workout_logged: output.workout_logged || false,
+          parsed_exercises: output.parsed_exercises || []
+        };
+      }
+    }
+    
+    // Fallback на старый формат для совместимости
+    const fallbackData = data as ApiResponse;
+    return {
+      success: fallbackData.success ?? true,
+      recognizedText: fallbackData.recognizedText,
+      message: fallbackData.message,
+      suggestions: fallbackData.suggestions,
+      next_workout_recommendation: fallbackData.next_workout_recommendation,
+      workout_logged: fallbackData.workout_logged || false,
+      parsed_exercises: fallbackData.parsed_exercises || []
+    };
   };
 
   const scrollToBottom = () => {
@@ -278,6 +360,17 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     const messageText = inputMessage.trim();
     setInputMessage("");
     
+    // СРАЗУ добавляем пользовательское сообщение в UI для мгновенного отображения
+    console.log('👤 Adding user message to chat immediately:', messageText);
+    addMessage({
+      text: messageText,
+      isUser: true,
+      dayId: selectedDay.id
+    });
+    
+    // Принудительный скролл после пользовательского сообщения
+    setTimeout(() => scrollToBottom(), 100);
+    
     // Используем новый API endpoint для полной обработки сообщения
     setLoading(true);
     try {
@@ -298,18 +391,11 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Message processed successfully:', result);
+      const rawResult = await response.json();
+      console.log('✅ Message processed successfully:', rawResult);
       
-      // Добавляем пользовательское сообщение в UI
-      addMessage({
-        text: messageText,
-        isUser: true,
-        dayId: selectedDay.id
-      });
-      
-      // Принудительный скролл после пользовательского сообщения
-      setTimeout(() => scrollToBottom(), 100);
+      // Парсим ответ webhook с помощью общей функции
+      const result = parseWebhookResponse(rawResult);
       
       // Используем новую функцию для обработки последовательности сообщений
       processMessageSequence(result);
@@ -402,12 +488,11 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Audio processed successfully:', result);
+      const rawResult = await response.json();
+      console.log('✅ Audio processed successfully:', rawResult);
       
-      // Для аудио сообщений извлекаем распознанный текст из ответа
-      // Предполагаем, что webhook возвращает распознанный текст в поле recognizedText
-      // Если recognizedText недоступен, используем основное сообщение как fallback
+      // Парсим ответ webhook с помощью общей функции
+      const result = parseWebhookResponse(rawResult);
       const recognizedText = result.recognizedText || result.message || "🎤 [Голосовое сообщение]";
       
       // Используем новую функцию для обработки последовательности сообщений с распознанным текстом

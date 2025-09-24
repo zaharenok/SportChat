@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Flame, Plus, Edit, X } from "lucide-react";
+import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Flame, Plus, Edit, X, EyeOff, Eye } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, Workout } from "@/lib/client-api";
@@ -23,6 +23,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [showAchievements, setShowAchievements] = useState(true);
   // Collapsible widgets state - reserved for future implementation
   // const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(new Set());
 
@@ -440,25 +441,46 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
         transition={{ delay: 0.2 }}
         className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
       >
-          <div className="flex items-center space-x-2 mb-6">
-            <Trophy className="w-5 h-5 text-primary-600" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Достижения</h3>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              <Trophy className="w-5 h-5 text-primary-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Достижения</h3>
+            </div>
+            <button
+              onClick={() => setShowAchievements(!showAchievements)}
+              className="flex items-center space-x-1 px-2 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+              title={showAchievements ? "Скрыть достижения" : "Показать достижения"}
+            >
+              {showAchievements ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <span className="hidden sm:inline text-xs">
+                {showAchievements ? "Скрыть" : "Показать"}
+              </span>
+            </button>
           </div>
           
-          <div className="space-y-4">
-            {achievements.map((achievement) => (
-              <div key={achievement.id} className="flex items-start space-x-3 p-3 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200">
-                <div className="text-2xl">{achievement.icon}</div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{achievement.title}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{achievement.description}</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {new Date(achievement.date).toLocaleDateString("ru-RU")}
-                  </p>
+          {showAchievements && (
+            <div className="space-y-4">
+              {achievements.map((achievement) => (
+                <div key={achievement.id} className="flex items-start space-x-3 p-3 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200">
+                  <div className="text-2xl">{achievement.icon}</div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">{achievement.title}</h4>
+                    <p className="text-sm text-gray-600 mt-1">{achievement.description}</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {new Date(achievement.date).toLocaleDateString("ru-RU")}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+          
+          {!showAchievements && (
+            <div className="text-center py-4 text-gray-400">
+              <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">Достижения скрыты</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Форма целей */}
