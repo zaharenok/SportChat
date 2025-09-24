@@ -130,12 +130,15 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     
     // Добавляем распознанный текст от пользователя для аудио сообщений
     if (recognizedText) {
+      console.log('👤 Adding recognized user message to chat:', recognizedText);
       addMessage({
         text: recognizedText,
         isUser: true,
         dayId: selectedDay!.id
       });
-      setTimeout(() => scrollToBottom(), 100);
+      // Принудительный скролл после сообщения пользователя
+      setTimeout(() => scrollToBottom(), 300);
+      currentDelay += 500; // Небольшая задержка перед ответом системы
     }
     
     // 1. Основной ответ системы (сразу)
@@ -224,6 +227,14 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       scrollToBottom();
     }
   }, [isLoading]);
+
+  // Скролл при появлении индикатора "Распознаю речь..."
+  useEffect(() => {
+    if (isProcessingAudio) {
+      console.log('🎤 Processing audio indicator appeared, scrolling to bottom');
+      scrollToBottom();
+    }
+  }, [isProcessingAudio]);
 
   // Отслеживание новых сообщений бота для эффекта печатания
   useEffect(() => {
