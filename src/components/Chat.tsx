@@ -111,17 +111,36 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   };
 
   const scrollToBottom = () => {
-    // Плавный скролл с дополнительными проверками
-    setTimeout(() => {
-      if (messagesEndRef.current) {
-        console.log('🔄 Executing scroll to bottom');
+    // Улучшенный плавный скролл с несколькими попытками для полной прокрутки
+    const scrollWithRetry = (attempt: number = 0) => {
+      if (messagesEndRef.current && attempt < 3) {
+        console.log(`🔄 Executing scroll to bottom (attempt ${attempt + 1})`);
         messagesEndRef.current.scrollIntoView({ 
           behavior: "smooth",
           block: "end",
           inline: "nearest"
         });
+        
+        // Дополнительная прокрутка через небольшой интервал для обеспечения полного скролла
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            const container = messagesEndRef.current.parentElement;
+            if (container) {
+              const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 10;
+              if (!isAtBottom) {
+                // Если не дошли до конца, делаем еще одну попытку
+                console.log('🔄 Not fully scrolled, retrying...');
+                scrollWithRetry(attempt + 1);
+              } else {
+                console.log('✅ Successfully scrolled to bottom');
+              }
+            }
+          }
+        }, 300);
       }
-    }, 100);
+    };
+    
+    setTimeout(() => scrollWithRetry(), 100);
   };
 
   // Функция для обработки последовательности сообщений с задержками
@@ -388,7 +407,8 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       
       // Для аудио сообщений извлекаем распознанный текст из ответа
       // Предполагаем, что webhook возвращает распознанный текст в поле recognizedText
-      const recognizedText = result.recognizedText || "🎤 [Голосовое сообщение обработано]";
+      // Если recognizedText недоступен, используем основное сообщение как fallback
+      const recognizedText = result.recognizedText || result.message || "🎤 [Голосовое сообщение]";
       
       // Используем новую функцию для обработки последовательности сообщений с распознанным текстом
       processMessageSequence(result, recognizedText);
