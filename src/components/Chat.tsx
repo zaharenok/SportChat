@@ -150,37 +150,49 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const parseWebhookResponse = (data: WebhookResponse): ApiResponse => {
     // Если пришел массив ответов
     if (Array.isArray(data)) {
-      // Первый элемент может быть Response audio с распознанным текстом
-      const firstItem = data[0];
-      
-      // Проверяем на Response audio формат
-      if (firstItem && 'text' in firstItem && 'usage' in firstItem) {
-        const audioItem = firstItem as WebhookResponseAudio;
-        console.log('🎤 Found Response audio format:', audioItem.text);
+      let recognizedText: string | undefined;
+      let aiResponse: ApiResponse | undefined;
+
+      // Ищем распознанный текст аудио и ответ ИИ в массиве
+      for (const item of data) {
+        // Проверяем на Response audio формат (распознанный текст)
+        if (item && 'text' in item && 'usage' in item) {
+          const audioItem = item as WebhookResponseAudio;
+          recognizedText = audioItem.text;
+          console.log('🎤 Found Response audio format:', audioItem.text);
+        }
+        
+        // Проверяем на ответ ИИ с output
+        if (item && 'output' in item) {
+          const output = (item as { output: { message: string; suggestions?: string | string[]; next_workout_recommendation?: string; workout_logged?: boolean; parsed_exercises?: Array<{ name: string; weight: number; sets: number; reps: number }> } }).output;
+          console.log('🤖 Found AI response format:', output);
+          aiResponse = {
+            success: true,
+            message: output.message,
+            suggestions: Array.isArray(output.suggestions) ? output.suggestions.join('\n\n') : output.suggestions,
+            next_workout_recommendation: output.next_workout_recommendation,
+            workout_logged: output.workout_logged || false,
+            parsed_exercises: output.parsed_exercises || []
+          };
+        }
+      }
+
+      // Возвращаем результат с обоими данными
+      if (aiResponse) {
+        return {
+          ...aiResponse,
+          recognizedText: recognizedText // Добавляем распознанный текст
+        };
+      } else if (recognizedText) {
+        // Если только распознанный текст без ответа ИИ
         return {
           success: true,
-          recognizedText: audioItem.text,
-          message: audioItem.text, // Используем как основное сообщение
+          recognizedText: recognizedText,
+          message: undefined, // Не показываем сообщение от ИИ пока его нет
           suggestions: undefined,
           next_workout_recommendation: undefined,
           workout_logged: false,
           parsed_exercises: []
-        };
-      }
-      
-      // Проверяем на основной формат ответа
-      if (firstItem && 'output' in firstItem) {
-        const mainItem = firstItem as WebhookResponseMain;
-        const output = mainItem.output;
-        console.log('📋 Found main response format:', output);
-        return {
-          success: true,
-          recognizedText: undefined, // В основном ответе может не быть распознанного текста
-          message: output.message,
-          suggestions: Array.isArray(output.suggestions) ? output.suggestions.join('\n\n') : output.suggestions,
-          next_workout_recommendation: output.next_workout_recommendation,
-          workout_logged: output.workout_logged || false,
-          parsed_exercises: output.parsed_exercises || []
         };
       }
     }
@@ -589,10 +601,10 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       
       // Парсим ответ webhook с помощью общей функции
       const result = parseWebhookResponse(rawResult);
-      const recognizedText = result.recognizedText || result.message || "🎤 [Голосовое сообщение]";
+      console.log('📋 Parsed result:', { recognizedText: result.recognizedText, hasMessage: !!result.message });
       
       // Используем новую функцию для обработки последовательности сообщений с распознанным текстом
-      processMessageSequence(result, recognizedText);
+      processMessageSequence(result, result.recognizedText);
       
       // Уведомляем об обновлении данных
       if (onWorkoutSaved && (result.workout_logged || (result.parsed_exercises && result.parsed_exercises.length > 0))) {

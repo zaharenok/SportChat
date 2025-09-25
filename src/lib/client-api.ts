@@ -1,7 +1,7 @@
 // Client-side API для работы с JSON базой данных
 
 // Интерфейсы (экспортируем из redis-db теперь)
-export type { User, Day, Workout, ChatMessage, Goal, Achievement, Exercise } from './redis-db'
+export type { User, Day, Workout, ChatMessage, Goal, Achievement, Exercise, Equipment, MuscleGroup } from './redis-db'
 import type { Day, Exercise } from './redis-db'
 
 // Helper функция для получения правильного базового URL
@@ -270,6 +270,92 @@ export const achievementsApi = {
     const response = await fetch(`${getBaseUrl()}/api/achievements?userId=${userId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch achievements')
+    }
+    return response.json()
+  }
+}
+
+// API для тренажёров
+export const equipmentApi = {
+  async getAll() {
+    const response = await fetch(`${getBaseUrl()}/api/equipment`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch equipment')
+    }
+    return response.json()
+  },
+
+  async create(name: string, category: string, muscleGroups: string[]) {
+    const response = await fetch(`${getBaseUrl()}/api/equipment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        category,
+        muscle_groups: muscleGroups
+      })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to create equipment')
+    }
+    return response.json()
+  },
+
+  async updateUsage(id: string, weight?: number, volume?: number) {
+    const response = await fetch(`${getBaseUrl()}/api/equipment`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id, weight, volume })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update equipment usage')
+    }
+    return response.json()
+  }
+}
+
+// API для мышечных групп
+export const muscleGroupsApi = {
+  async getAll() {
+    const response = await fetch(`${getBaseUrl()}/api/muscle-groups`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch muscle groups')
+    }
+    return response.json()
+  },
+
+  async create(name: string, englishName: string, category: string) {
+    const response = await fetch(`${getBaseUrl()}/api/muscle-groups`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        english_name: englishName,
+        category
+      })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to create muscle group')
+    }
+    return response.json()
+  },
+
+  async updateWorkout(id: string, weight: number, volume: number) {
+    const response = await fetch(`${getBaseUrl()}/api/muscle-groups`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id, weight, volume })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update muscle group workout')
     }
     return response.json()
   }

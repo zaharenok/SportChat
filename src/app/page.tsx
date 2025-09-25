@@ -8,6 +8,8 @@ import { LoginForm } from "@/components/LoginForm";
 import { UserProfile } from "@/components/UserProfile";
 import { WorkoutsList } from "@/components/WorkoutsList";
 import { Achievements } from "@/components/Achievements";
+import { Equipment } from "@/components/Equipment";
+import { MuscleGroups } from "@/components/MuscleGroups";
 import { ChatProvider } from "@/lib/chat-context";
 import { Day, daysApi, utils } from "@/lib/client-api";
 
@@ -19,7 +21,7 @@ interface User {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "workouts" | "achievements">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "dashboard" | "profile" | "workouts" | "achievements" | "equipment" | "muscles">("chat");
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,6 +168,16 @@ export default function Home() {
           /* Полноэкранные достижения */
           <div className="h-full overflow-y-auto">
             <Achievements selectedUser={currentUser} />
+          </div>
+        ) : activeTab === "equipment" ? (
+          /* Полноэкранный список тренажёров */
+          <div className="h-full overflow-y-auto">
+            <Equipment selectedUser={currentUser} />
+          </div>
+        ) : activeTab === "muscles" ? (
+          /* Полноэкранный анализ мышечных групп */
+          <div className="h-full overflow-y-auto">
+            <MuscleGroups selectedUser={currentUser} />
           </div>
         ) : (
           <>

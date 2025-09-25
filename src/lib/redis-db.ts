@@ -69,6 +69,49 @@ export interface Achievement {
   created_at: string
 }
 
+export interface Equipment {
+  id: string
+  name: string
+  category: 'strength' | 'cardio' | 'functional' | 'free_weights'
+  muscle_groups: string[] // связанные мышечные группы
+  usage_count: number
+  last_used: string
+  max_weight?: number
+  total_volume?: number // общий объём (вес × повторения)
+  created_at: string
+  updated_at: string
+}
+
+export interface MuscleGroup {
+  id: string
+  name: string
+  english_name: string
+  category: 'upper' | 'core' | 'lower'
+  workouts_count: number
+  last_worked: string
+  total_volume: number
+  max_weight: number
+  progress_trend: 'up' | 'down' | 'stable'
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkoutEquipment {
+  id: string
+  workout_id: string
+  equipment_id: string
+  weight_used?: number
+  created_at: string
+}
+
+export interface WorkoutMuscleGroup {
+  id: string
+  workout_id: string
+  muscle_group_id: string
+  volume: number // вес × повторения для этой группы
+  created_at: string
+}
+
 export interface ChatSettings {
   id: string
   user_id: string
@@ -481,5 +524,131 @@ export const achievementsDb = {
 
     console.log('🏆 Achievement created:', achievement.title)
     return achievement
+  }
+}
+
+// API для тренажёров
+export const equipmentDb = {
+  async getAll(): Promise<Equipment[]> {
+    return await redisDb.readArray<Equipment>('equipment')
+  },
+
+  async getById(id: string): Promise<Equipment | null> {
+    const equipment = await redisDb.readArray<Equipment>('equipment')
+    return equipment.find(eq => eq.id === id) || null
+  },
+
+  async create(name: string, category: Equipment['category'], muscleGroups: string[]): Promise<Equipment> {
+    const equipment: Equipment = {
+      id: utils.generateId(),
+      name,
+      category,
+      muscle_groups: muscleGroups,
+      usage_count: 0,
+      last_used: utils.getCurrentTimestamp(),
+      max_weight: 0,
+      total_volume: 0,
+      created_at: utils.getCurrentTimestamp(),
+      updated_at: utils.getCurrentTimestamp()
+    }
+
+    const equipmentList = await redisDb.readArray<Equipment>('equipment')
+    equipmentList.push(equipment)
+    await redisDb.writeArray('equipment', equipmentList)
+
+    console.log('🏋️ Equipment created:', equipment.name)
+    return equipment
+  },
+
+  async updateUsage(id: string, weight?: number, volume?: number): Promise<Equipment | null> {
+    const equipmentList = await redisDb.readArray<Equipment>('equipment')
+    const index = equipmentList.findIndex(eq => eq.id === id)
+    
+    if (index === -1) return null
+
+    equipmentList[index].usage_count++
+    equipmentList[index].last_used = utils.getCurrentTimestamp()
+    equipmentList[index].updated_at = utils.getCurrentTimestamp()
+    
+    if (weight && (equipmentList[index].max_weight || 0) < weight) {
+      equipmentList[index].max_weight = weight
+    }
+    
+    if (volume) {
+      equipmentList[index].total_volume = (equipmentList[index].total_volume || 0) + volume
+    }
+
+    await redisDb.writeArray('equipment', equipmentList)
+    return equipmentList[index]
+  }
+}
+
+// API для мышечных групп
+export const muscleGroupsDb = {
+  async getAll(): Promise<MuscleGroup[]> {
+    return await redisDb.readArray<MuscleGroup>('muscle_groups')
+  },
+
+  async getById(id: string): Promise<MuscleGroup | null> {
+    const muscleGroups = await redisDb.readArray<MuscleGroup>('muscle_groups')
+    return muscleGroups.find(mg => mg.id === id) || null
+  },
+
+  async getByEnglishName(englishName: string): Promise<MuscleGroup | null> {
+    const muscleGroups = await redisDb.readArray<MuscleGroup>('muscle_groups')
+    return muscleGroups.find(mg => mg.english_name === englishName) || null
+  },
+
+  async create(name: string, englishName: string, category: MuscleGroup['category']): Promise<MuscleGroup> {
+    const muscleGroup: MuscleGroup = {
+      id: utils.generateId(),
+      name,
+      english_name: englishName,
+      category,
+      workouts_count: 0,
+      last_worked: utils.getCurrentTimestamp(),
+      total_volume: 0,
+      max_weight: 0,
+      progress_trend: 'stable',
+      created_at: utils.getCurrentTimestamp(),
+      updated_at: utils.getCurrentTimestamp()
+    }
+
+    const muscleGroups = await redisDb.readArray<MuscleGroup>('muscle_groups')
+    muscleGroups.push(muscleGroup)
+    await redisDb.writeArray('muscle_groups', muscleGroups)
+
+    console.log('💪 Muscle group created:', muscleGroup.name)
+    return muscleGroup
+  },
+
+  async updateWorkout(id: string, weight: number, volume: number): Promise<MuscleGroup | null> {
+    const muscleGroups = await redisDb.readArray<MuscleGroup>('muscle_groups')
+    const index = muscleGroups.findIndex(mg => mg.id === id)
+    
+    if (index === -1) return null
+
+    const previousVolume = muscleGroups[index].total_volume
+    
+    muscleGroups[index].workouts_count++
+    muscleGroups[index].last_worked = utils.getCurrentTimestamp()
+    muscleGroups[index].total_volume += volume
+    muscleGroups[index].updated_at = utils.getCurrentTimestamp()
+    
+    if (muscleGroups[index].max_weight < weight) {
+      muscleGroups[index].max_weight = weight
+    }
+
+    // Определяем тренд прогресса (упрощённая логика)
+    if (volume > previousVolume * 0.05) { // рост объёма более чем на 5%
+      muscleGroups[index].progress_trend = 'up'
+    } else if (volume < previousVolume * 0.95) { // снижение объёма более чем на 5%
+      muscleGroups[index].progress_trend = 'down'
+    } else {
+      muscleGroups[index].progress_trend = 'stable'
+    }
+
+    await redisDb.writeArray('muscle_groups', muscleGroups)
+    return muscleGroups[index]
   }
 }
