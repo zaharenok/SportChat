@@ -5,7 +5,16 @@ import { Trash2, RefreshCw } from 'lucide-react';
 
 export default function ClearDataPage() {
   const [isClearing, setIsClearing] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{
+    message: string;
+    details?: {
+      userKeys: number;
+      workouts: number;
+      goals: number;
+      achievements: number;
+      messages: number;
+    };
+  } | null>(null);
   const [error, setError] = useState('');
 
   const clearUserData = async () => {
@@ -114,12 +123,12 @@ export default function ClearDataPage() {
             )}
           </button>
 
-          <a
-            href="/"
+          <button
+            onClick={() => window.location.href = '/'}
             className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             Вернуться в приложение
-          </a>
+          </button>
         </div>
 
         <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
