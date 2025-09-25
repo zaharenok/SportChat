@@ -553,56 +553,123 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const startRecording = async () => {
     try {
       console.log('🎤 Starting audio recording...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      
+      // Проверяем поддержку браузера
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Браузер не поддерживает запись аудио');
+      }
+
+      console.log('🎤 Requesting microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
+      });
+      console.log('✅ Microphone access granted');
+
+      console.log('🎤 Creating MediaRecorder...');
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/wav'
+      });
+      console.log('✅ MediaRecorder created with mimeType:', recorder.mimeType);
       
       const chunks: Blob[] = [];
       
       recorder.ondataavailable = (event) => {
+        console.log('📊 Audio data chunk received:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           chunks.push(event.data);
         }
       };
       
       recorder.onstop = () => {
-        console.log('🎤 Recording stopped, processing audio...');
+        console.log('🎤 Recording stopped, total chunks:', chunks.length);
         setIsRecording(false);
         setIsProcessingAudio(true);
         
-        const audioBlob = new Blob(chunks, { type: 'audio/wav' });
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/wav' });
+        console.log('🎵 Audio blob created:', {
+          size: audioBlob.size,
+          type: audioBlob.type,
+          chunks: chunks.length
+        });
+        
         handleAudioMessage(audioBlob);
         
         // Останавливаем все треки
-        stream.getTracks().forEach(track => track.stop());
+        console.log('🎤 Stopping audio tracks...');
+        stream.getTracks().forEach(track => {
+          console.log('🎤 Stopping track:', track.kind, track.label);
+          track.stop();
+        });
+      };
+
+      recorder.onerror = (event) => {
+        console.error('❌ MediaRecorder error:', event);
+        setIsRecording(false);
+        setIsProcessingAudio(false);
       };
       
       setMediaRecorder(recorder);
       setIsRecording(true);
       
       recorder.start();
-      console.log('🎤 Recording started');
+      console.log('✅ Recording started successfully');
       
     } catch (error) {
-      console.error('❌ Error starting recording:', error);
-      alert('Не удалось получить доступ к микрофону. Проверьте разрешения.');
+      console.error('❌ Error starting recording:');
+      console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('❌ Error message:', error instanceof Error ? error.message : String(error));
+      
+      setIsRecording(false);
+      setIsProcessingAudio(false);
+      
+      // Показываем пользователю сообщение об ошибке
+      const errorMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert(`Не удалось получить доступ к микрофону: ${errorMsg}. Проверьте разрешения.`);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       console.log('🎤 Stopping recording...');
+      console.log('🎤 MediaRecorder state before stop:', mediaRecorder.state);
       mediaRecorder.stop();
+      console.log('🎤 Stop command sent to MediaRecorder');
+    } else {
+      console.warn('⚠️ Cannot stop recording:', {
+        hasMediaRecorder: !!mediaRecorder,
+        state: mediaRecorder?.state || 'no recorder'
+      });
     }
   };
 
   const handleAudioMessage = async (audioBlob: Blob) => {
     if (!selectedDay) {
+      console.error('❌ Audio processing failed: No selected day');
       setIsProcessingAudio(false);
       return;
     }
 
+    console.log('🎵 Starting audio processing...');
+    console.log('📊 Audio details:', {
+      size: audioBlob.size,
+      type: audioBlob.type,
+      userId: selectedUser.id,
+      dayId: selectedDay.id
+    });
+
     try {
-      console.log('🎵 Processing audio message, size:', audioBlob.size);
+      // Проверяем размер файла
+      if (audioBlob.size === 0) {
+        throw new Error('Аудио файл пустой');
+      }
+
+      if (audioBlob.size > 10 * 1024 * 1024) { // 10MB limit
+        throw new Error('Аудио файл слишком большой (лимит 10MB)');
+      }
       
       // Создаем FormData для отправки аудио файла
       const formData = new FormData();
@@ -611,51 +678,77 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       formData.append('dayId', selectedDay.id);
       formData.append('isAudio', 'true'); // Флаг что это аудио сообщение
       
-      console.log('📤 Sending audio to webhook...');
+      console.log('📤 Sending audio to /api/process-message...');
+      console.log('📋 FormData entries:');
+      for (const [key, value] of formData.entries()) {
+        if (key === 'audio') {
+          console.log(`  ${key}: [Blob ${(value as Blob).size} bytes]`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
       
       const response = await fetch('/api/process-message', {
         method: 'POST',
         body: formData
       });
 
+      console.log('📡 Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Server error response:', errorText);
+        throw new Error(`Server error ${response.status}: ${errorText}`);
       }
 
+      console.log('📨 Reading response...');
       const rawResult = await response.json();
-      console.log('✅ Audio processed successfully:', rawResult);
+      console.log('✅ Raw server response:', JSON.stringify(rawResult, null, 2));
       
       // Парсим ответ webhook с помощью общей функции
+      console.log('🔄 Parsing webhook response...');
       const result = parseWebhookResponse(rawResult);
       console.log('📋 Parsed result:', { 
         recognizedText: result.recognizedText, 
         hasMessage: !!result.message, 
-        suggestions: result.suggestions,
-        workout_logged: result.workout_logged 
+        messageLength: result.message?.length || 0,
+        suggestions: Array.isArray(result.suggestions) ? result.suggestions.length : !!result.suggestions,
+        workout_logged: result.workout_logged,
+        parsed_exercises: result.parsed_exercises?.length || 0
       });
       
       // Проверяем что есть минимальные данные для отображения
       if (!result.message && !result.recognizedText) {
         console.warn('⚠️ No message or recognized text in audio response');
+        console.warn('⚠️ Raw result structure:', Object.keys(rawResult));
         throw new Error('Пустой ответ от сервера');
       }
       
+      console.log('🔄 Processing message sequence...');
       // Используем новую функцию для обработки последовательности сообщений с распознанным текстом
       processMessageSequence(result, result.recognizedText);
       
       // Уведомляем об обновлении данных
       if (onWorkoutSaved && (result.workout_logged || (result.parsed_exercises && result.parsed_exercises.length > 0))) {
+        console.log('🔄 Notifying about workout data update...');
         onWorkoutSaved();
       }
+
+      console.log('✅ Audio processing completed successfully');
       
     } catch (error) {
-      console.error('❌ Error processing audio:', error);
+      console.error('❌ Error processing audio:');
+      console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('❌ Error message:', error instanceof Error ? error.message : String(error));
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
       addMessage({
         text: t('chat.audioProcessingError'),
         isUser: false,
         dayId: selectedDay.id
       });
     } finally {
+      console.log('🏁 Setting isProcessingAudio to false');
       setIsProcessingAudio(false);
     }
   };

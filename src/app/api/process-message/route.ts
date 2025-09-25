@@ -56,7 +56,14 @@ export async function POST(request: NextRequest) {
       
       if (isAudio) {
         message = `🎤 Голосовое сообщение (${Math.round(audioFile.size / 1024)}KB)`;
-        console.log('📨 Processing audio message:', { userId, dayId, audioSize: audioFile.size, isAudio });
+        console.log('📨 Processing audio message:', { 
+          userId, 
+          dayId, 
+          audioSize: audioFile.size, 
+          audioType: audioFile.type,
+          audioName: audioFile.name,
+          isAudio 
+        });
       } else if (isPhoto) {
         const photoMessage = message ? `📷 ${message}` : '📷 Фото отправлено';
         console.log('📨 Processing photo message:', { userId, dayId, photoSize: photoFile.size, message: photoMessage, isPhoto });
@@ -108,15 +115,20 @@ export async function POST(request: NextRequest) {
     let webhookResponse: Response;
     
     if ((isAudio && audioFile) || (isPhoto && photoFile)) {
+      console.log('🔄 Preparing file upload to webhook...');
+      console.log('📋 Webhook URL:', webhookUrl);
+      
       // Отправляем файл (аудио или фото) в webhook как FormData
       const webhookFormData = new FormData();
       
       if (isAudio && audioFile) {
+        console.log('🎵 Adding audio file to webhook FormData...');
         webhookFormData.append('audio', audioFile);
         webhookFormData.append('isAudio', 'true');
       }
       
       if (isPhoto && photoFile) {
+        console.log('📷 Adding photo file to webhook FormData...');
         webhookFormData.append('photo', photoFile);
         webhookFormData.append('hasPhoto', 'true');
       }
@@ -127,15 +139,30 @@ export async function POST(request: NextRequest) {
       webhookFormData.append('user_id', user.id);
       webhookFormData.append('language', 'russian'); // Язык пользователя
       
-      webhookResponse = await fetch(webhookUrl, {
-        method: "POST",
-        body: webhookFormData,
-        headers: {
-          // Добавляем заголовки безопасности
-          'User-Agent': 'SportChat/1.0',
-          'X-Request-Source': 'SportChat-App'
-        }
-      });
+      console.log('📤 Sending file to webhook with parameters:');
+      console.log('  - message:', message);
+      console.log('  - user_email:', user.email);
+      console.log('  - user_name:', user.name);
+      console.log('  - user_id:', user.id);
+      console.log('  - language: russian');
+      
+      try {
+        console.log('⏳ Making webhook request...');
+        webhookResponse = await fetch(webhookUrl, {
+          method: "POST",
+          body: webhookFormData,
+          headers: {
+            // Добавляем заголовки безопасности
+            'User-Agent': 'SportChat/1.0',
+            'X-Request-Source': 'SportChat-App'
+          }
+        });
+        console.log('✅ Webhook request completed');
+        console.log('📡 Webhook response status:', webhookResponse.status, webhookResponse.statusText);
+      } catch (fetchError) {
+        console.error('❌ Webhook fetch error:', fetchError);
+        throw new Error(`Webhook request failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+      }
     } else {
       // Отправляем обычное сообщение как JSON
       webhookResponse = await fetch(webhookUrl, {
@@ -160,11 +187,37 @@ export async function POST(request: NextRequest) {
     }
 
     if (!webhookResponse.ok) {
-      throw new Error(`Webhook failed: ${webhookResponse.status}`)
+      console.error('❌ Webhook response not OK:', {
+        status: webhookResponse.status,
+        statusText: webhookResponse.statusText,
+        headers: Object.fromEntries(webhookResponse.headers.entries())
+      });
+      
+      let errorBody = '';
+      try {
+        errorBody = await webhookResponse.text();
+        console.error('❌ Webhook error body:', errorBody);
+      } catch (readError) {
+        console.error('❌ Could not read webhook error body:', readError);
+      }
+      
+      throw new Error(`Webhook failed with status ${webhookResponse.status}: ${errorBody}`)
     }
 
-    const webhookData = await webhookResponse.json()
-    console.log('🎯 Webhook response:', webhookData)
+    console.log('📨 Reading webhook response...');
+    let webhookData;
+    try {
+      webhookData = await webhookResponse.json();
+      console.log('🎯 Webhook response received:');
+      console.log('🎯 Response type:', typeof webhookData);
+      console.log('🎯 Response is array:', Array.isArray(webhookData));
+      console.log('🎯 Response structure:', JSON.stringify(webhookData, null, 2));
+    } catch (jsonError) {
+      console.error('❌ Failed to parse webhook JSON response:', jsonError);
+      const textResponse = await webhookResponse.text();
+      console.error('❌ Raw webhook response:', textResponse);
+      throw new Error(`Webhook returned invalid JSON: ${textResponse}`);
+    }
 
     // Webhook возвращает массив, берем первый элемент
     const firstResponse = Array.isArray(webhookData) ? webhookData[0] : webhookData
