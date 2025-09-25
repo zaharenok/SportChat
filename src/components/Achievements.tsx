@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Calendar, Eye, EyeOff, Star } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 interface Achievement {
   id: string;
@@ -27,6 +28,7 @@ interface AchievementsProps {
 }
 
 export function Achievements({ selectedUser }: AchievementsProps) {
+  const { t, language } = useLanguage();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [hiddenAchievements, setHiddenAchievements] = useState<Set<string>>(new Set());
@@ -83,7 +85,7 @@ export function Achievements({ selectedUser }: AchievementsProps) {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка достижений...</p>
+          <p className="text-gray-600">{t('achievements.loading')}</p>
         </div>
       </div>
     );
@@ -101,8 +103,8 @@ export function Achievements({ selectedUser }: AchievementsProps) {
             <Trophy className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Достижения</h1>
-            <p className="text-gray-600">Ваши спортивные успехи и завершенные цели</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('achievements.title')}</h1>
+            <p className="text-gray-600">{t('achievements.description')}</p>
           </div>
         </div>
 
@@ -111,14 +113,14 @@ export function Achievements({ selectedUser }: AchievementsProps) {
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
             <div className="flex items-center space-x-2">
               <Star className="w-5 h-5 text-yellow-600" />
-              <span className="text-sm font-medium text-yellow-800">Всего достижений</span>
+              <span className="text-sm font-medium text-yellow-800">{t('achievements.totalAchievements')}</span>
             </div>
             <p className="text-2xl font-bold text-yellow-900 mt-1">{achievements.length}</p>
           </div>
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
             <div className="flex items-center space-x-2">
               <Eye className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">Видимых</span>
+              <span className="text-sm font-medium text-blue-800">{t('achievements.visible')}</span>
             </div>
             <p className="text-2xl font-bold text-blue-900 mt-1">{visibleAchievements.length}</p>
           </div>
@@ -128,7 +130,7 @@ export function Achievements({ selectedUser }: AchievementsProps) {
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600">
               <EyeOff className="w-4 h-4 inline mr-1" />
-              {hiddenAchievementsCount} достижений скрыто
+              {hiddenAchievementsCount} {t('achievements.hiddenCount')}
             </p>
           </div>
         )}
@@ -140,8 +142,8 @@ export function Achievements({ selectedUser }: AchievementsProps) {
           <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
             <Trophy className="w-12 h-12 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Пока нет достижений</h3>
-          <p className="text-gray-600 mb-4">Завершите свои первые цели, чтобы получить достижения!</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t('achievements.noAchievements')}</h3>
+          <p className="text-gray-600 mb-4">{t('achievements.noAchievementsDesc')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -185,7 +187,7 @@ export function Achievements({ selectedUser }: AchievementsProps) {
                       <div className="flex items-center space-x-2">
                         <Calendar className={`w-4 h-4 ${isHidden ? 'text-gray-400' : 'text-gray-500'}`} />
                         <span className={`text-sm ${isHidden ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {new Date(achievement.date).toLocaleDateString('ru-RU', {
+                          {new Date(achievement.date).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', {
                             day: 'numeric',
                             month: 'long',
                             year: 'numeric'
@@ -205,7 +207,7 @@ export function Achievements({ selectedUser }: AchievementsProps) {
                         : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
                       }
                     `}
-                    title={isHidden ? 'Показать достижение' : 'Скрыть достижение'}
+                    title={isHidden ? t('achievements.showAchievement') : t('achievements.hideAchievement')}
                   >
                     {isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>

@@ -5,6 +5,7 @@ import { Send, MessageCircle, Mic, Square, Camera, Image, X } from "lucide-react
 import { motion, AnimatePresence } from "framer-motion";
 import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
+import { useLanguage } from "@/lib/language-context";
 import { TypewriterText } from "./TypewriterText";
 
 // Интерфейс для ответа API
@@ -62,6 +63,7 @@ interface ChatProps {
 
 export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const { messages, isLoading, setMessages, sendMessage, addMessage, setLoading } = useChatContext();
+  const { t } = useLanguage();
   const [inputMessage, setInputMessage] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
@@ -164,8 +166,22 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         
         // Проверяем на ответ ИИ с output
         if (item && 'output' in item) {
-          const output = (item as { output: { message: string; suggestions?: string | string[]; next_workout_recommendation?: string; workout_logged?: boolean; parsed_exercises?: Array<{ name: string; weight: number; sets: number; reps: number }> } }).output;
+          const output = (item as { output: { 
+            message: string; 
+            suggestions?: string | string[]; 
+            next_workout_recommendation?: string; 
+            workout_logged?: boolean; 
+            parsed_exercises?: Array<{ name: string; weight: number; sets: number; reps: number }>;
+            recognized_text?: string; // Добавляем поле для распознанного текста
+          } }).output;
           console.log('🤖 Found AI response format:', output);
+          
+          // Если в output есть recognized_text, используем его
+          if (output.recognized_text && !recognizedText) {
+            recognizedText = output.recognized_text;
+            console.log('🎤 Found recognized text in output:', output.recognized_text);
+          }
+          
           aiResponse = {
             success: true,
             message: output.message,
@@ -318,6 +334,16 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       // Принудительный скролл после сообщения пользователя
       setTimeout(() => scrollToBottom(), 300);
       currentDelay += 500; // Небольшая задержка перед ответом системы
+    } else if (result.message) {
+      // Если нет распознанного текста, но есть ответ от ИИ, добавляем placeholder
+      console.log('🎤 Adding voice message placeholder');
+      addMessage({
+        text: `🎤 ${t('chat.voiceMessage')}`,
+        isUser: true,
+        dayId: selectedDay!.id
+      });
+      setTimeout(() => scrollToBottom(), 300);
+      currentDelay += 500;
     }
     
     // 1. Основной ответ системы (сразу)
@@ -601,7 +627,18 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       
       // Парсим ответ webhook с помощью общей функции
       const result = parseWebhookResponse(rawResult);
-      console.log('📋 Parsed result:', { recognizedText: result.recognizedText, hasMessage: !!result.message });
+      console.log('📋 Parsed result:', { 
+        recognizedText: result.recognizedText, 
+        hasMessage: !!result.message, 
+        suggestions: result.suggestions,
+        workout_logged: result.workout_logged 
+      });
+      
+      // Проверяем что есть минимальные данные для отображения
+      if (!result.message && !result.recognizedText) {
+        console.warn('⚠️ No message or recognized text in audio response');
+        throw new Error('Пустой ответ от сервера');
+      }
       
       // Используем новую функцию для обработки последовательности сообщений с распознанным текстом
       processMessageSequence(result, result.recognizedText);
@@ -614,7 +651,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     } catch (error) {
       console.error('❌ Error processing audio:', error);
       addMessage({
-        text: 'Извините, не удалось обработать голосовое сообщение. Попробуйте еще раз.',
+        text: t('chat.audioProcessingError'),
         isUser: false,
         dayId: selectedDay.id
       });
@@ -765,7 +802,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                   transition={{ repeat: Infinity, duration: 0.8, delay: 0.4 }}
                 />
               </div>
-              <span className="text-sm text-blue-600">🎤 Распознаю речь...</span>
+              <span className="text-sm text-blue-600">🎤 {t('chat.recording')}</span>
             </div>
           </motion.div>
         )}
@@ -786,7 +823,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 target.style.height = Math.min(target.scrollHeight, 120) + 'px';
               }}
               onKeyPress={handleKeyPress}
-              placeholder="Расскажи о тренировке..."
+              placeholder={t('chat.placeholder')}
               rows={1}
               className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-primary-50 border border-primary-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-sm text-primary-900 placeholder:text-xs sm:placeholder:text-sm placeholder:text-primary-500"
               style={{
@@ -810,7 +847,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             onClick={() => document.getElementById('photo-upload')?.click()}
             disabled={isLoading || isRecording}
             className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            title="Выбрать фото"
+            title={t('chat.selectPhoto')}
           >
             <Image className="w-5 h-5" />
           </button>
@@ -819,7 +856,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             onClick={startCamera}
             disabled={isLoading || isRecording}
             className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            title="Сделать фото"
+            title={t('chat.takePhoto')}
           >
             <Camera className="w-5 h-5" />
           </button>
@@ -860,7 +897,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 className="w-20 h-20 object-cover rounded-lg border border-gray-300"
               />
               <div className="flex-1">
-                <p className="text-sm text-primary-700 font-medium">📷 Фото готово к отправке</p>
+                <p className="text-sm text-primary-700 font-medium">📷 {t('chat.photoReady')}</p>
                 <p className="text-xs text-primary-500 mt-1">
                   {selectedPhoto && `${Math.round(selectedPhoto.size / 1024)}KB`}
                 </p>
@@ -868,7 +905,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
               <button
                 onClick={removePhoto}
                 className="text-primary-500 hover:text-red-500 transition-colors"
-                title="Удалить фото"
+                title={t('chat.removePhoto')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -882,7 +919,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-xl max-w-sm w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Сделать фото</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('chat.takePhoto')}</h3>
               <button
                 onClick={stopCamera}
                 className="text-gray-500 hover:text-gray-700"
@@ -913,13 +950,13 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 onClick={capturePhoto}
                 className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
               >
-                📸 Сделать фото
+                📸 {t('chat.takePhoto')}
               </button>
               <button
                 onClick={stopCamera}
                 className="px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Отмена
+                {t('common.cancel')}
               </button>
             </div>
           </div>

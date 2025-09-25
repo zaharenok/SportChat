@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Dumbbell, TrendingUp, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Equipment as EquipmentType, equipmentApi } from "@/lib/client-api";
+import { useLanguage } from "@/lib/language-context";
 
 // Используем тип из API
 // type Equipment уже импортирован как EquipmentType
@@ -40,12 +41,7 @@ const defaultEquipment: EquipmentType[] = [
   }
 ];
 
-const categoryNames = {
-  strength: 'Силовые тренажёры',
-  cardio: 'Кардио тренажёры',
-  functional: 'Функциональные',
-  free_weights: 'Свободные веса'
-};
+// categoryNames теперь будут динамическими через функцию t()
 
 const categoryColors = {
   strength: 'bg-red-50 text-red-700 border-red-200',
@@ -55,6 +51,14 @@ const categoryColors = {
 };
 
 export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
+  const { t } = useLanguage();
+  
+  const getCategoryNames = () => ({
+    strength: t('equipment.strength'),
+    cardio: t('equipment.cardio'),
+    functional: t('equipment.functional'),
+    free_weights: t('equipment.freeWeights')
+  });
   const [equipment, setEquipment] = useState<EquipmentType[]>(defaultEquipment);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [_isLoading, setIsLoading] = useState(true);
@@ -92,7 +96,7 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
         <div className="mb-6">
           <div className="flex items-center space-x-3 mb-4">
             <Dumbbell className="w-8 h-8 text-primary-600" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Тренажёры</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('equipment.title')}</h1>
           </div>
           <p className="text-gray-600">Отслеживание использования тренажёров и прогресса</p>
         </div>
@@ -106,7 +110,7 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Всего тренажёров</p>
+                <p className="text-sm text-gray-600 mb-1">{t('equipment.totalEquipment')}</p>
                 <p className="text-2xl font-bold text-gray-900">{equipment.length}</p>
               </div>
               <Dumbbell className="w-8 h-8 text-primary-600" />
@@ -121,7 +125,7 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Общие использования</p>
+                <p className="text-sm text-gray-600 mb-1">{t('equipment.totalUsage')}</p>
                 <p className="text-2xl font-bold text-gray-900">{totalUsage}</p>
               </div>
               <BarChart3 className="w-8 h-8 text-green-600" />
@@ -136,7 +140,7 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Общий объём</p>
+                <p className="text-sm text-gray-600 mb-1">{t('equipment.totalVolume')}</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {Math.round(totalVolume / 1000)}k кг
                 </p>
@@ -157,9 +161,9 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
                   : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
               }`}
             >
-              Все
+              {t('equipment.all')}
             </button>
-            {Object.entries(categoryNames).map(([key, name]) => (
+            {Object.entries(getCategoryNames()).map(([key, name]) => (
               <button
                 key={key}
                 onClick={() => setSelectedCategory(key)}
@@ -190,7 +194,7 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">{eq.name}</h3>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${categoryColors[eq.category]}`}>
-                    {categoryNames[eq.category]}
+                    {getCategoryNames()[eq.category]}
                   </span>
                 </div>
                 <Dumbbell className="w-6 h-6 text-gray-400" />
@@ -231,7 +235,7 @@ export function Equipment({ selectedUser: _selectedUser }: EquipmentProps) {
                 )}
                 {eq.total_volume && eq.total_volume > 0 && (
                   <div>
-                    <p className="text-gray-600">Общий объём</p>
+                    <p className="text-gray-600">{t('equipment.volume')}</p>
                     <p className="font-semibold text-gray-900">
                       {Math.round(eq.total_volume / 1000)}k кг
                     </p>

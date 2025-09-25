@@ -11,6 +11,7 @@ import { Achievements } from "@/components/Achievements";
 import { Equipment } from "@/components/Equipment";
 import { MuscleGroups } from "@/components/MuscleGroups";
 import { ChatProvider } from "@/lib/chat-context";
+import { LanguageProvider } from "@/lib/language-context";
 import { Day, daysApi, utils } from "@/lib/client-api";
 
 interface User {
@@ -144,7 +145,8 @@ export default function Home() {
   }
 
   return (
-    <ChatProvider>
+    <LanguageProvider>
+      <ChatProvider>
       <div className="h-screen flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
         
@@ -205,5 +207,6 @@ export default function Home() {
       </main>
     </div>
     </ChatProvider>
+    </LanguageProvider>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Dumbbell, Trash2, Edit, Save, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { workoutsApi, User, Workout } from "@/lib/client-api";
+import { useLanguage } from "@/lib/language-context";
 
 interface WorkoutsListProps {
   selectedUser: User;
@@ -26,6 +27,7 @@ interface EditingExercise {
 }
 
 export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps) {
+  const { language, t } = useLanguage();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; date: string | null }>({ 
@@ -154,7 +156,7 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка тренировок...</p>
+          <p className="text-gray-600">{t('workouts.loading')}</p>
         </div>
       </div>
     );
@@ -169,7 +171,7 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
       >
         <div className="flex items-center space-x-2 mb-6">
           <Dumbbell className="w-5 h-5 text-primary-600" />
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Последние тренировки</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">{t('workouts.title')}</h3>
         </div>
         
         <div className="flex-1 overflow-y-auto">
@@ -190,19 +192,19 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900 text-sm sm:text-base">
-                        {new Date(groupedWorkout.date).toLocaleDateString("ru-RU", { 
+                        {new Date(groupedWorkout.date).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { 
                           day: 'numeric', 
                           month: 'long',
                           weekday: 'short'
                         })}
                       </h4>
-                      <p className="text-xs sm:text-sm text-gray-500">{groupedWorkout.totalExercises} упражнений</p>
+                      <p className="text-xs sm:text-sm text-gray-500">{groupedWorkout.totalExercises} {t('workouts.exercises')}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDeleteWorkout(groupedWorkout.date)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-100 rounded-lg text-red-600 hover:text-red-700"
-                    title="Удалить тренировку"
+                    title={t('workouts.deleteWorkout')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -224,13 +226,13 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                                 value={editingExercise.name}
                                 onChange={(e) => setEditingExercise({...editingExercise, name: e.target.value})}
                                 className="w-full p-2 text-xs sm:text-sm font-medium text-gray-800 bg-primary-50 border border-primary-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                placeholder="Название упражнения"
+                                placeholder={t('workouts.exerciseName')}
                               />
                               
                               {/* Адаптивная сетка для мобильных и десктопных экранов */}
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                                 <div className="flex flex-col space-y-1">
-                                  <label className="font-medium text-gray-600">Вес (кг)</label>
+                                  <label className="font-medium text-gray-600">{t('workouts.weight')}</label>
                                   <input
                                     type="number"
                                     value={editingExercise.weight}
@@ -241,7 +243,7 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                                   />
                                 </div>
                                 <div className="flex flex-col space-y-1">
-                                  <label className="font-medium text-gray-600">Подходы</label>
+                                  <label className="font-medium text-gray-600">{t('workouts.sets')}</label>
                                   <input
                                     type="number"
                                     value={editingExercise.sets}
@@ -252,7 +254,7 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                                   />
                                 </div>
                                 <div className="flex flex-col space-y-1">
-                                  <label className="font-medium text-gray-600">Повторы</label>
+                                  <label className="font-medium text-gray-600">{t('workouts.reps')}</label>
                                   <input
                                     type="number"
                                     value={editingExercise.reps}
@@ -271,16 +273,16 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                               <div className="flex items-center space-x-4 mt-1 text-xs text-gray-600">
                                 {exercise.weight > 0 && (
                                   <span className="flex items-center space-x-1">
-                                    <span className="font-medium">Вес:</span>
-                                    <span>{exercise.weight} кг</span>
+                                    <span className="font-medium">{t('workouts.weightLabel')}</span>
+                                    <span>{exercise.weight} {t('common.kg')}</span>
                                   </span>
                                 )}
                                 <span className="flex items-center space-x-1">
-                                  <span className="font-medium">Подходы:</span>
+                                  <span className="font-medium">{t('workouts.setsLabel')}</span>
                                   <span>{exercise.sets}</span>
                                 </span>
                                 <span className="flex items-center space-x-1">
-                                  <span className="font-medium">Повторы:</span>
+                                  <span className="font-medium">{t('workouts.repsLabel')}</span>
                                   <span>{exercise.reps}</span>
                                 </span>
                               </div>
@@ -294,18 +296,18 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                               <button
                                 onClick={handleSaveExercise}
                                 className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-100 hover:bg-green-200 rounded-lg text-green-700 hover:text-green-800 text-xs font-medium transition-colors"
-                                title="Сохранить"
+                                title={t('common.save')}
                               >
                                 <Save className="w-4 h-4" />
-                                <span className="sm:hidden">Сохранить</span>
+                                <span className="sm:hidden">{t('common.save')}</span>
                               </button>
                               <button
                                 onClick={handleCancelEdit}
                                 className="flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 hover:text-gray-800 text-xs font-medium transition-colors"
-                                title="Отмена"
+                                title={t('common.cancel')}
                               >
                                 <X className="w-4 h-4" />
-                                <span className="sm:hidden">Отмена</span>
+                                <span className="sm:hidden">{t('common.cancel')}</span>
                               </button>
                             </div>
                           ) : (
@@ -314,7 +316,7 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                               <button
                                 onClick={() => handleEditExercise(workout.id, exerciseIndex, exercise)}
                                 className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 hover:text-blue-700"
-                                title="Редактировать"
+                                title={t('workouts.editExercise')}
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
@@ -332,8 +334,8 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
             {groupedWorkouts.length === 0 && workouts.length === 0 && (
               <div className="text-center py-12 text-gray-500">
                 <Dumbbell className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-sm sm:text-base mb-2">Пока нет записанных тренировок</p>
-                <p className="text-xs sm:text-sm">Начните чатить с ИИ тренером, чтобы записать свою первую тренировку!</p>
+                <p className="text-sm sm:text-base mb-2">{t('workouts.noWorkouts')}</p>
+                <p className="text-xs sm:text-sm">{t('workouts.noWorkoutsDesc')}</p>
               </div>
             )}
           </div>
@@ -360,8 +362,8 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Удалить тренировку?</h3>
-                <p className="text-sm text-gray-500">Это действие нельзя будет отменить</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('workouts.confirmDelete')}</h3>
+                <p className="text-sm text-gray-500">{t('workouts.deleteConfirmDesc')}</p>
               </div>
             </div>
             
@@ -370,13 +372,13 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                 onClick={cancelDeleteWorkout}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
               >
-                Отмена
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmDeleteWorkout}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
-                Удалить
+                {t('workouts.delete')}
               </button>
             </div>
             </motion.div>

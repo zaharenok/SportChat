@@ -5,6 +5,7 @@ import { Target, Calendar, Trophy, TrendingUp, Dumbbell, Flame, Plus, Edit, X, E
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Day, User, goalsApi, achievementsApi, workoutsApi, Goal, Achievement, Workout } from "@/lib/client-api";
+import { useLanguage } from "@/lib/language-context";
 
 // Removed mock data - charts now use real workout data calculated below
 
@@ -17,6 +18,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
+  const { t } = useLanguage();
   const [activeChart, setActiveChart] = useState<"weekly" | "monthly">("weekly");
   const [goals, setGoals] = useState<Goal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -157,7 +159,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   // Расчет недельной активности на основе реальных тренировок
   const calculateWeeklyStats = () => {
     const now = new Date();
-    const weekdays = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
+    const weekdays = [t('dashboard.weekdays.0'), t('dashboard.weekdays.1'), t('dashboard.weekdays.2'), t('dashboard.weekdays.3'), t('dashboard.weekdays.4'), t('dashboard.weekdays.5'), t('dashboard.weekdays.6')];
     const weeklyData = [];
 
     for (let i = 6; i >= 0; i--) {
@@ -189,7 +191,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
   // Расчет месячной активности на основе реальных тренировок
   const calculateMonthlyStats = () => {
     const now = new Date();
-    const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    const monthNames = [t('dashboard.months.0'), t('dashboard.months.1'), t('dashboard.months.2'), t('dashboard.months.3'), t('dashboard.months.4'), t('dashboard.months.5'), t('dashboard.months.6'), t('dashboard.months.7'), t('dashboard.months.8'), t('dashboard.months.9'), t('dashboard.months.10'), t('dashboard.months.11')];
     const monthlyData = [];
 
     for (let i = 3; i >= 0; i--) {
@@ -243,7 +245,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{value}</p>
           {change && (
             <p className={`text-sm mt-1 ${change > 0 ? "text-green-600" : "text-red-600"}`}>
-              {change > 0 ? "+" : ""}{change}% за неделю
+              {change > 0 ? "+" : ""}{change}% {t('dashboard.weeklyChange')}
             </p>
           )}
         </div>
@@ -260,28 +262,28 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Calendar}
-          title="Дней с тренировками"
+          title={t('dashboard.trainingDays')}
           value={stats.trainingDays.toString()}
           change={0}
           color="bg-primary-600"
         />
         <StatCard
           icon={Dumbbell}
-          title="Уникальных упражнений"
+          title={t('dashboard.uniqueExercises')}
           value={stats.uniqueExercises.toString()}
           change={0}
           color="bg-primary-500"
         />
         <StatCard
           icon={Flame}
-          title="Дней тренировок за неделю"
+          title={t('dashboard.weeklyTraining')}
           value={stats.weeklyTrainingDays.toString()}
           change={0}
           color="bg-primary-700"
         />
         <StatCard
           icon={TrendingUp}
-          title="Прогресс целей %"
+          title={t('dashboard.goalsProgress')}
           value={stats.avgRepsPerSet.toString()}
           change={0}
           color="bg-primary-800"
@@ -296,7 +298,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           className="lg:col-span-2 bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Активность</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{t('dashboard.activity')}</h3>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setActiveChart("weekly")}
@@ -306,7 +308,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                Неделя
+                {t('dashboard.week')}
               </button>
               <button
                 onClick={() => setActiveChart("monthly")}
@@ -316,7 +318,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                Месяц
+                {t('dashboard.month')}
               </button>
             </div>
           </div>
@@ -371,14 +373,14 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <Target className="w-5 h-5 text-primary-600" />
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Цели</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">{t('dashboard.goals')}</h3>
             </div>
             <button
               onClick={() => setShowGoalForm(true)}
               className="flex items-center space-x-1 px-2 sm:px-3 py-1.5 bg-primary-600 text-white text-xs sm:text-sm rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Добавить</span>
+              <span className="hidden sm:inline">{t('dashboard.addGoal')}</span>
             </button>
           </div>
           
@@ -386,8 +388,8 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
             {goals.filter(goal => !goal.is_completed).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm">Нет активных целей</p>
-                <p className="text-xs">Нажмите &quot;Добавить&quot;, чтобы создать первую цель</p>
+                <p className="text-sm">{t('dashboard.noActiveGoals')}</p>
+                <p className="text-xs">{t('dashboard.clickAddGoal')}</p>
               </div>
             ) : (
               goals.filter(goal => !goal.is_completed).map((goal) => (
@@ -396,20 +398,20 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
                     <p className="text-sm font-medium text-gray-700">{goal.title}</p>
                     <div className="flex items-center space-x-2">
                       <p className="text-sm text-gray-500">
-                        {goal.current_value >= goal.target_value ? `Завершено! 🎉` : `${goal.current_value}/${goal.target_value} ${goal.unit}`}
+                        {goal.current_value >= goal.target_value ? `${t('dashboard.completed')} 🎉` : `${goal.current_value}/${goal.target_value} ${goal.unit}`}
                       </p>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
                         <button
                           onClick={() => handleEditGoal(goal)}
                           className="p-1 hover:bg-blue-100 rounded text-blue-600"
-                          title="Редактировать"
+                          title={t('dashboard.tooltip.edit')}
                         >
                           <Edit className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => handleDeleteGoal(goal.id)}
                           className="p-1 hover:bg-red-100 rounded text-red-600"
-                          title="Удалить"
+                          title={t('dashboard.tooltip.delete')}
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -444,16 +446,16 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <Trophy className="w-5 h-5 text-primary-600" />
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Достижения</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">{t('dashboard.achievements')}</h3>
             </div>
             <button
               onClick={() => setShowAchievements(!showAchievements)}
               className="flex items-center space-x-1 px-2 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
-              title={showAchievements ? "Скрыть достижения" : "Показать достижения"}
+              title={showAchievements ? t('dashboard.hideAchievements') : t('dashboard.showAchievements')}
             >
               {showAchievements ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               <span className="hidden sm:inline text-xs">
-                {showAchievements ? "Скрыть" : "Показать"}
+                {showAchievements ? t('dashboard.hide') : t('dashboard.show')}
               </span>
             </button>
           </div>
@@ -478,7 +480,7 @@ export function Dashboard({ selectedUser, updateTrigger }: DashboardProps) {
           {!showAchievements && (
             <div className="text-center py-4 text-gray-400">
               <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">Достижения скрыты</p>
+              <p className="text-sm">{t('dashboard.achievementsHidden')}</p>
             </div>
           )}
         </motion.div>
@@ -536,13 +538,15 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
     });
   };
 
+  const { t } = useLanguage();
+  
   const categories = [
-    { value: 'fitness', label: 'Фитнес' },
-    { value: 'strength', label: 'Сила' },
-    { value: 'cardio', label: 'Кардио' },
-    { value: 'flexibility', label: 'Гибкость' },
-    { value: 'weight', label: 'Вес' },
-    { value: 'other', label: 'Другое' }
+    { value: 'fitness', label: t('dashboard.categoryFitness') },
+    { value: 'strength', label: t('dashboard.categoryStrength') },
+    { value: 'cardio', label: t('dashboard.categoryCardio') },
+    { value: 'flexibility', label: t('dashboard.categoryFlexibility') },
+    { value: 'weight', label: t('dashboard.categoryWeight') },
+    { value: 'other', label: t('dashboard.categoryOther') }
   ];
 
   return (
@@ -560,7 +564,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
-            {goal ? 'Редактировать цель' : 'Новая цель'}
+            {goal ? t('dashboard.editGoal') : t('dashboard.newGoal')}
           </h3>
           <button
             onClick={onClose}
@@ -573,7 +577,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="goal-title" className="block text-sm font-medium text-gray-700 mb-1">
-              Название *
+              {t('dashboard.goalName')} *
             </label>
             <input
               id="goal-title"
@@ -582,14 +586,14 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-              placeholder="Например: Подтянуться 50 раз"
+              placeholder={t('dashboard.goalNamePlaceholder')}
               required
             />
           </div>
 
           <div>
             <label htmlFor="goal-description" className="block text-sm font-medium text-gray-700 mb-1">
-              Описание
+              {t('dashboard.description')}
             </label>
             <textarea
               id="goal-description"
@@ -597,7 +601,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-              placeholder="Описание цели..."
+              placeholder={t('dashboard.descriptionPlaceholder')}
               rows={2}
             />
           </div>
@@ -605,7 +609,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="goal-target" className="block text-sm font-medium text-gray-700 mb-1">
-                Цель *
+                {t('dashboard.target')} *
               </label>
               <input
                 id="goal-target"
@@ -620,7 +624,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
             </div>
             <div>
               <label htmlFor="goal-current" className="block text-sm font-medium text-gray-700 mb-1">
-                Текущий прогресс
+                {t('dashboard.currentProgress')}
               </label>
               <input
                 id="goal-current"
@@ -637,7 +641,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="goal-unit" className="block text-sm font-medium text-gray-700 mb-1">
-                Единица измерения
+                {t('dashboard.unit')}
               </label>
               <input
                 id="goal-unit"
@@ -646,12 +650,12 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-                placeholder="раз, кг, км..."
+                placeholder={t('dashboard.unitPlaceholder')}
               />
             </div>
             <div>
               <label htmlFor="goal-category" className="block text-sm font-medium text-gray-700 mb-1">
-                Категория
+                {t('dashboard.category')}
               </label>
               <select
                 id="goal-category"
@@ -669,7 +673,7 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
 
           <div>
             <label htmlFor="goal-duedate" className="block text-sm font-medium text-gray-700 mb-1">
-              Срок выполнения
+              {t('dashboard.dueDate')}
             </label>
             <input
               id="goal-duedate"
@@ -687,13 +691,13 @@ function GoalFormModal({ goal, onSubmit, onClose }: GoalFormModalProps) {
               onClick={onClose}
               className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
-              Отмена
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
             >
-              {goal ? 'Сохранить' : 'Создать'}
+              {goal ? t('common.save') : t('dashboard.create')}
             </button>
           </div>
         </form>

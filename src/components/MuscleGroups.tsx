@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Activity, TrendingUp, Target } from "lucide-react";
 import { motion } from "framer-motion";
 import { MuscleGroup as MuscleGroupType, muscleGroupsApi } from "@/lib/client-api";
+import { useLanguage } from "@/lib/language-context";
 
 // Используем тип из API
 // type MuscleGroup уже импортирован как MuscleGroupType
@@ -120,11 +121,7 @@ const defaultMuscleGroups: MuscleGroupType[] = [
   }
 ];
 
-const categoryNames = {
-  upper: 'Верх тела',
-  core: 'Кор',
-  lower: 'Низ тела'
-};
+// Category names are now handled dynamically with translations
 
 const categoryColors = {
   upper: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -145,10 +142,18 @@ const trendColors = {
 };
 
 export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps) {
+  const { t } = useLanguage();
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupType[]>(defaultMuscleGroups);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [highlightedMuscle, setHighlightedMuscle] = useState<string | null>(null);
   const [_isLoading, setIsLoading] = useState(true);
+
+  // Dynamic category names using translations
+  const categoryNames = {
+    upper: t('muscles.upper'),
+    core: t('muscles.core'),
+    lower: t('muscles.lower')
+  };
 
   // Загружаем данные мышечных групп
   useEffect(() => {
@@ -184,9 +189,9 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
         <div className="mb-6">
           <div className="flex items-center space-x-3 mb-4">
             <Activity className="w-8 h-8 text-primary-600" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Мышечные группы</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('muscles.title')}</h1>
           </div>
-          <p className="text-gray-600">Анализ развития мышечных групп и прогресса тренировок</p>
+          <p className="text-gray-600">{t('muscles.description')}</p>
         </div>
 
         {/* Общая статистика */}
@@ -198,7 +203,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Групп мышц</p>
+                <p className="text-sm text-gray-600 mb-1">{t('muscles.totalGroups')}</p>
                 <p className="text-2xl font-bold text-gray-900">{muscleGroups.length}</p>
               </div>
               <Activity className="w-8 h-8 text-primary-600" />
@@ -213,7 +218,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Всего тренировок</p>
+                <p className="text-sm text-gray-600 mb-1">{t('muscles.totalWorkouts')}</p>
                 <p className="text-2xl font-bold text-gray-900">{totalWorkouts}</p>
               </div>
               <Target className="w-8 h-8 text-green-600" />
@@ -228,9 +233,9 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Общий объём</p>
+                <p className="text-sm text-gray-600 mb-1">{t('muscles.totalVolume')}</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(totalVolume / 1000)}k кг
+                  {Math.round(totalVolume / 1000)}k {t('common.kg')}
                 </p>
               </div>
               <TrendingUp className="w-8 h-8 text-blue-600" />
@@ -245,7 +250,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Рост прогресса</p>
+                <p className="text-sm text-gray-600 mb-1">{t('muscles.progressGrowth')}</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {Math.round(averageProgress * 100)}%
                 </p>
@@ -266,7 +271,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
                   : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
               }`}
             >
-              Все группы
+              {t('muscles.allGroups')}
             </button>
             {Object.entries(categoryNames).map(([key, name]) => (
               <button
@@ -291,7 +296,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
             animate={{ opacity: 1, y: 0 }}
             className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Визуализация тренированности</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('muscles.visualization')}</h3>
             <div className="flex justify-center">
               {/* Простая схема человеческого тела */}
               <div className="relative w-64 h-96 mx-auto">
@@ -416,12 +421,12 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
             </div>
             <div className="text-center mt-4">
               <p className="text-sm text-gray-600">
-                Наведите курсор на мышечные группы для подсветки
+                {t('muscles.hoverHelp')}
               </p>
               <div className="flex justify-center space-x-4 mt-2 text-xs">
-                <span className="flex items-center"><div className="w-3 h-3 bg-red-400 rounded mr-1"></div>Активно тренируется</span>
-                <span className="flex items-center"><div className="w-3 h-3 bg-blue-200 rounded mr-1"></div>Умеренно</span>
-                <span className="flex items-center"><div className="w-3 h-3 bg-gray-200 rounded mr-1"></div>Редко</span>
+                <span className="flex items-center"><div className="w-3 h-3 bg-red-400 rounded mr-1"></div>{t('muscles.activeTraining')}</span>
+                <span className="flex items-center"><div className="w-3 h-3 bg-blue-200 rounded mr-1"></div>{t('muscles.moderate')}</span>
+                <span className="flex items-center"><div className="w-3 h-3 bg-gray-200 rounded mr-1"></div>{t('muscles.rarely')}</span>
               </div>
             </div>
           </motion.div>
@@ -442,7 +447,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
               {/* Заголовок мышечной группы */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{mg.name}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{t(`muscle.${mg.english_name}`)}</h3>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${categoryColors[mg.category]}`}>
                     {categoryNames[mg.category]}
                   </span>
@@ -455,26 +460,26 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
               {/* Статистика */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600">Тренировок</p>
+                  <p className="text-gray-600">{t('muscles.workouts')}</p>
                   <p className="font-semibold text-gray-900">{mg.workouts_count}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Последний раз</p>
+                  <p className="text-gray-600">{t('muscles.lastWorked')}</p>
                   <p className="font-semibold text-gray-900">
                     {new Date(mg.last_worked).toLocaleDateString('ru-RU')}
                   </p>
                 </div>
                 {mg.max_weight > 0 && (
                   <div>
-                    <p className="text-gray-600">Макс. вес</p>
-                    <p className="font-semibold text-gray-900">{mg.max_weight} кг</p>
+                    <p className="text-gray-600">{t('muscles.maxWeight')}</p>
+                    <p className="font-semibold text-gray-900">{mg.max_weight} {t('common.kg')}</p>
                   </div>
                 )}
                 {mg.total_volume > 0 && (
                   <div>
-                    <p className="text-gray-600">Объём</p>
+                    <p className="text-gray-600">{t('muscles.totalVolume')}</p>
                     <p className="font-semibold text-gray-900">
-                      {Math.round(mg.total_volume / 1000)}k кг
+                      {Math.round(mg.total_volume / 1000)}k {t('common.kg')}
                     </p>
                   </div>
                 )}
@@ -483,7 +488,7 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
               {/* Прогресс бар */}
               <div className="mt-4">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-600">Активность</span>
+                  <span className="text-gray-600">{t('muscles.activity')}</span>
                   <span className="font-medium">
                     {Math.round((mg.workouts_count / Math.max(...muscleGroups.map(m => m.workouts_count))) * 100)}%
                   </span>
@@ -506,8 +511,8 @@ export function MuscleGroups({ selectedUser: _selectedUser }: MuscleGroupsProps)
             <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">
               {selectedCategory === 'all' 
-                ? 'Мышечные группы пока не добавлены' 
-                : 'Нет групп в выбранной категории'
+                ? t('muscles.noGroups') 
+                : t('muscles.noGroupsCategory')
               }
             </p>
           </div>

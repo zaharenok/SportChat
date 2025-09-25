@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { User, Mail, Edit3, Check, X, LogOut, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLanguage } from '@/lib/language-context'
 
 interface AuthUser {
   id: string
@@ -18,6 +19,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) {
+  const { language, t } = useLanguage()
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
@@ -32,7 +34,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
 
   const handleSave = async () => {
     if (!name.trim() || !email.trim()) {
-      setError('Имя и email обязательны')
+      setError(t('profile.nameEmailRequired'))
       return
     }
 
@@ -51,18 +53,18 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Ошибка обновления профиля')
+        throw new Error(data.error || t('profile.updateError'))
       }
 
       const updatedUser = await response.json()
       onUserUpdate(updatedUser)
       setIsEditing(false)
-      setSuccess('Профиль успешно обновлен!')
+      setSuccess(t('profile.profileUpdated'))
       
       // Убираем сообщение об успехе через 3 секунды
       setTimeout(() => setSuccess(''), 3000)
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Ошибка обновления профиля'
+      const errorMessage = error instanceof Error ? error.message : t('profile.updateError')
       setError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -77,7 +79,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
   }
 
   const handleLogout = async () => {
-    if (!confirm('Вы уверены, что хотите выйти?')) return
+    if (!confirm(t('profile.confirmLogout'))) return
 
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -92,7 +94,8 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
   }
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('ru-RU', {
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US'
+    return new Date(dateStr).toLocaleDateString(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -107,9 +110,9 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Профиль пользователя</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{t('profile.title')}</h3>
             <p className="text-xs sm:text-sm text-gray-500">
-              Зарегистрирован {formatDate(user.created_at)}
+              {t('profile.registeredOn')} {formatDate(user.created_at)}
             </p>
           </div>
         </div>
@@ -120,14 +123,14 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
               <button
                 onClick={() => setIsEditing(true)}
                 className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                title="Редактировать профиль"
+                title={t('profile.editProfile')}
               >
                 <Edit3 className="w-4 h-4" />
               </button>
               <button
                 onClick={handleLogout}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Выйти"
+                title={t('profile.logout')}
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -138,7 +141,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
                 onClick={handleSave}
                 disabled={isLoading}
                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
-                title="Сохранить"
+                title={t('profile.save')}
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -150,7 +153,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
                 onClick={handleCancel}
                 disabled={isLoading}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                title="Отменить"
+                title={t('profile.cancel')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -162,7 +165,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
       <div className="space-y-4">
         <div>
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-            Имя пользователя
+            {t('profile.username')}
           </label>
           {isEditing ? (
             <input
@@ -170,7 +173,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-              placeholder="Введите имя"
+              placeholder={t('profile.enterName')}
             />
           ) : (
             <p className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
@@ -181,7 +184,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
 
         <div>
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-            Email адрес
+            {t('profile.email')}
           </label>
           {isEditing ? (
             <div className="relative">
@@ -191,7 +194,7 @@ export function UserProfile({ user, onUserUpdate, onLogout }: UserProfileProps) 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-3 py-2 border border-primary-200 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-                placeholder="Введите email"
+                placeholder={t('profile.enterEmail')}
               />
             </div>
           ) : (

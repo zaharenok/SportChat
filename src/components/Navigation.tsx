@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, BarChart3, User, Menu, X, Dumbbell, Trophy, Settings, Activity } from "lucide-react";
+import { MessageCircle, BarChart3, User, Menu, X, Dumbbell, Trophy, Settings, Activity, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/language-context";
 
 interface NavigationProps {
   activeTab: "chat" | "dashboard" | "profile" | "workouts" | "achievements" | "equipment" | "muscles";
@@ -12,15 +13,16 @@ interface NavigationProps {
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   const menuItems = [
-    { id: "chat", label: "Чат", icon: MessageCircle },
-    { id: "dashboard", label: "Дашборд", icon: BarChart3 },
-    { id: "workouts", label: "Последние тренировки", icon: Dumbbell },
-    { id: "achievements", label: "Достижения", icon: Trophy },
-    { id: "equipment", label: "Тренажёры", icon: Settings },
-    { id: "muscles", label: "Мышечные группы", icon: Activity },
-    { id: "profile", label: "Профиль", icon: User }
+    { id: "chat", label: t('nav.chat'), icon: MessageCircle },
+    { id: "dashboard", label: t('nav.dashboard'), icon: BarChart3 },
+    { id: "workouts", label: t('nav.workouts'), icon: Dumbbell },
+    { id: "achievements", label: t('nav.achievements'), icon: Trophy },
+    { id: "equipment", label: t('nav.equipment'), icon: Settings },
+    { id: "muscles", label: t('nav.muscles'), icon: Activity },
+    { id: "profile", label: t('nav.profile'), icon: User }
   ] as const;
 
   const handleTabChange = (tab: typeof activeTab) => {
@@ -42,13 +44,27 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
             <h1 className="text-xl font-bold text-primary-800">SportChat</h1>
           </div>
           
-          {/* Hamburger Button (всегда показываем) */}
-          <button
-            onClick={() => setIsMenuOpen(true)}
-            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
+              className="flex items-center space-x-1 px-2 py-1 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors text-sm"
+              title={language === 'ru' ? 'Switch to English' : 'Переключить на русский'}
+            >
+              <Globe className="w-4 h-4" />
+              <span className="font-medium">
+                {language === 'ru' ? 'EN' : 'RU'}
+              </span>
+            </button>
+            
+            {/* Hamburger Button */}
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
       </div>
 
