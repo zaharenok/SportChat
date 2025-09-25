@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, MessageCircle, Mic, Square } from "lucide-react";
+import { Send, MessageCircle, Mic, Square, Camera, Image, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
@@ -71,6 +71,12 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  
+  // Фото состояния
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -190,6 +196,66 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       workout_logged: fallbackData.workout_logged || false,
       parsed_exercises: fallbackData.parsed_exercises || []
     };
+  };
+
+  // Функции для работы с фото
+  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setPhotoPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' } // Задняя камера для фото тренажёров
+      });
+      setCameraStream(stream);
+      setIsTakingPhoto(true);
+    } catch (error) {
+      console.error('Ошибка доступа к камере:', error);
+      alert('Не удалось получить доступ к камере');
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!cameraStream) return;
+
+    const video = document.getElementById('camera-video') as HTMLVideoElement;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    if (video && context) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          setSelectedPhoto(file);
+          setPhotoPreview(canvas.toDataURL());
+          stopCamera();
+        }
+      }, 'image/jpeg', 0.8);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setIsTakingPhoto(false);
+  };
+
+  const removePhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
   };
 
   const scrollToBottom = () => {
@@ -355,17 +421,28 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   }, [isInitialized, messages.length]);
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || !selectedDay) return;
+    // Проверяем что есть либо текст, либо фото
+    if ((!inputMessage.trim() && !selectedPhoto) || isLoading || !selectedDay) return;
 
     const messageText = inputMessage.trim();
+    const hasPhoto = !!selectedPhoto;
+    const photoFile = selectedPhoto;
+    
     setInputMessage("");
+    removePhoto(); // Очищаем фото после отправки
     
     // СРАЗУ добавляем пользовательское сообщение в UI для мгновенного отображения
-    console.log('👤 Adding user message to chat immediately:', messageText);
+    const displayMessage = hasPhoto 
+      ? (messageText ? `📷 ${messageText}` : '📷 Фото отправлено')
+      : messageText;
+    
+    console.log('👤 Adding user message to chat immediately:', displayMessage);
     addMessage({
-      text: messageText,
+      text: displayMessage,
       isUser: true,
-      dayId: selectedDay.id
+      dayId: selectedDay.id,
+      hasPhoto: hasPhoto,
+      photoPreview: photoPreview || undefined
     });
     
     // Принудительный скролл после пользовательского сообщения
@@ -374,18 +451,37 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     // Используем новый API endpoint для полной обработки сообщения
     setLoading(true);
     try {
-      console.log('📨 Sending message via process-message API:', messageText);
-      const response = await fetch('/api/process-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: selectedUser.id,
-          dayId: selectedDay.id,
-          message: messageText
-        })
-      });
+      console.log('📨 Sending message via process-message API:', messageText, hasPhoto ? 'with photo' : '');
+      
+      let response: Response;
+      
+      if (hasPhoto && photoFile) {
+        // Отправляем с фото как FormData
+        const formData = new FormData();
+        formData.append('userId', selectedUser.id);
+        formData.append('dayId', selectedDay.id);
+        formData.append('message', messageText);
+        formData.append('photo', photoFile);
+        formData.append('isPhoto', 'true');
+        
+        response = await fetch('/api/process-message', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // Отправляем как обычный JSON
+        response = await fetch('/api/process-message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: selectedUser.id,
+            dayId: selectedDay.id,
+            message: messageText
+          })
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -571,6 +667,17 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 }`}
                 style={message.isUser ? { background: 'var(--gradient-accent)' } : {}}
               >
+                {/* Отображение фото если есть */}
+                {message.hasPhoto && message.photoPreview && (
+                  <div className="mb-3">
+                    <img 
+                      src={message.photoPreview} 
+                      alt="Attached photo"
+                      className="max-w-full max-h-64 rounded-lg object-cover border border-gray-200"
+                    />
+                  </div>
+                )}
+                
                 <div className="whitespace-pre-line text-sm leading-relaxed">
                   {!message.isUser && typingMessageId === message.id ? (
                     <TypewriterText 
@@ -678,6 +785,33 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             />
           </div>
           
+          {/* Кнопки для фото */}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            className="hidden"
+            id="photo-upload"
+          />
+          
+          <button
+            onClick={() => document.getElementById('photo-upload')?.click()}
+            disabled={isLoading || isRecording}
+            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            title="Выбрать фото"
+          >
+            <Image className="w-5 h-5" />
+          </button>
+          
+          <button
+            onClick={startCamera}
+            disabled={isLoading || isRecording}
+            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            title="Сделать фото"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+          
           {/* Кнопка записи аудио */}
           <motion.button
             onClick={isRecording ? stopRecording : startRecording}
@@ -693,17 +827,92 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-5 h-5" />}
           </motion.button>
           
-          {/* Кнопка отправки текста */}
+          {/* Кнопка отправки текста/фото */}
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isLoading || isRecording || isProcessingAudio}
+            disabled={(!inputMessage.trim() && !selectedPhoto) || isLoading || isRecording || isProcessingAudio}
             className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             style={{ background: 'var(--gradient-accent)' }}
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
+        
+        {/* Превью выбранного фото */}
+        {photoPreview && (
+          <div className="mt-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
+            <div className="flex items-start space-x-3">
+              <img 
+                src={photoPreview} 
+                alt="Selected photo preview"
+                className="w-20 h-20 object-cover rounded-lg border border-gray-300"
+              />
+              <div className="flex-1">
+                <p className="text-sm text-primary-700 font-medium">📷 Фото готово к отправке</p>
+                <p className="text-xs text-primary-500 mt-1">
+                  {selectedPhoto && `${Math.round(selectedPhoto.size / 1024)}KB`}
+                </p>
+              </div>
+              <button
+                onClick={removePhoto}
+                className="text-primary-500 hover:text-red-500 transition-colors"
+                title="Удалить фото"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+      
+      {/* Модальное окно камеры */}
+      {isTakingPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-xl max-w-sm w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Сделать фото</h3>
+              <button
+                onClick={stopCamera}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="relative mb-4">
+              {cameraStream && (
+                <video
+                  id="camera-video"
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-64 object-cover rounded-lg bg-gray-100"
+                  ref={(video) => {
+                    if (video && cameraStream) {
+                      video.srcObject = cameraStream;
+                    }
+                  }}
+                />
+              )}
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={capturePhoto}
+                className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                📸 Сделать фото
+              </button>
+              <button
+                onClick={stopCamera}
+                className="px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

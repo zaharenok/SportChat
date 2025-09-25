@@ -20,27 +20,48 @@ function getGoalIcon(goalTitle: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    let userId: string, dayId: string, message: string = '', audioFile: File | null = null, isAudio: boolean = false;
+    let userId: string, dayId: string, message: string = '', audioFile: File | null = null, photoFile: File | null = null, isAudio: boolean = false, isPhoto: boolean = false;
     
     // Проверяем тип контента - JSON или FormData
     const contentType = request.headers.get('content-type') || '';
     
     if (contentType.includes('multipart/form-data')) {
-      // Обрабатываем FormData (аудио)
+      // Обрабатываем FormData (аудио или фото)
       const formData = await request.formData();
       userId = formData.get('userId') as string;
       dayId = formData.get('dayId') as string;
+      message = (formData.get('message') as string) || '';
       audioFile = formData.get('audio') as File;
+      photoFile = formData.get('photo') as File;
       isAudio = formData.get('isAudio') === 'true';
+      isPhoto = formData.get('isPhoto') === 'true';
       
-      if (!userId || !dayId || !audioFile) {
+      if (!userId || !dayId) {
         return NextResponse.json({ 
-          error: 'userId, dayId, and audio are required for audio messages' 
+          error: 'userId and dayId are required' 
         }, { status: 400 })
       }
       
-      message = `🎤 Голосовое сообщение (${Math.round(audioFile.size / 1024)}KB)`;
-      console.log('📨 Processing audio message:', { userId, dayId, audioSize: audioFile.size, isAudio });
+      if (isAudio && !audioFile) {
+        return NextResponse.json({ 
+          error: 'audio file is required for audio messages' 
+        }, { status: 400 })
+      }
+      
+      if (isPhoto && !photoFile) {
+        return NextResponse.json({ 
+          error: 'photo file is required for photo messages' 
+        }, { status: 400 })
+      }
+      
+      if (isAudio) {
+        message = `🎤 Голосовое сообщение (${Math.round(audioFile.size / 1024)}KB)`;
+        console.log('📨 Processing audio message:', { userId, dayId, audioSize: audioFile.size, isAudio });
+      } else if (isPhoto) {
+        const photoMessage = message ? `📷 ${message}` : '📷 Фото отправлено';
+        console.log('📨 Processing photo message:', { userId, dayId, photoSize: photoFile.size, message: photoMessage, isPhoto });
+        message = photoMessage;
+      }
       
     } else {
       // Обрабатываем JSON (обычные сообщения)
@@ -86,16 +107,25 @@ export async function POST(request: NextRequest) {
 
     let webhookResponse: Response;
     
-    if (isAudio && audioFile) {
-      // Отправляем аудио файл в webhook как FormData
+    if ((isAudio && audioFile) || (isPhoto && photoFile)) {
+      // Отправляем файл (аудио или фото) в webhook как FormData
       const webhookFormData = new FormData();
-      webhookFormData.append('audio', audioFile);
+      
+      if (isAudio && audioFile) {
+        webhookFormData.append('audio', audioFile);
+        webhookFormData.append('isAudio', 'true');
+      }
+      
+      if (isPhoto && photoFile) {
+        webhookFormData.append('photo', photoFile);
+        webhookFormData.append('hasPhoto', 'true');
+      }
+      
       webhookFormData.append('message', message);
       webhookFormData.append('user_email', user.email);
       webhookFormData.append('user_name', user.name);
       webhookFormData.append('user_id', user.id);
-      webhookFormData.append('language', 'ru'); // Язык пользователя
-      webhookFormData.append('isAudio', 'true');
+      webhookFormData.append('language', 'russian'); // Язык пользователя
       
       webhookResponse = await fetch(webhookUrl, {
         method: "POST",
@@ -122,8 +152,9 @@ export async function POST(request: NextRequest) {
           user_email: user.email,
           user_name: user.name,
           user_id: user.id,
-          language: 'ru', // Язык пользователя
-          isAudio: false
+          language: 'russian', // Язык пользователя
+          isAudio: false,
+          hasPhoto: false
         }),
       });
     }

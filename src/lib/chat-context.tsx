@@ -9,6 +9,8 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
   dayId?: string; // Связываем с конкретным днем
+  hasPhoto?: boolean; // Есть ли фото в сообщении
+  photoPreview?: string; // Base64 превью фото для отображения
 }
 
 interface ChatContextType {
