@@ -488,6 +488,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     
     // Используем новый API endpoint для полной обработки сообщения
     setLoading(true);
+    setIsProcessingAudio(false); // Сбрасываем индикатор аудио обработки при текстовом сообщении
     try {
       console.log('📨 Sending message via process-message API:', messageText, hasPhoto ? 'with photo' : '');
       
