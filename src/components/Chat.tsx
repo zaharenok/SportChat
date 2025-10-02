@@ -73,6 +73,10 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+
+  // Счетчики времени для индикаторов
+  const [processingTimer, setProcessingTimer] = useState(0);
+  const [loadingTimer, setLoadingTimer] = useState(0);
   
   // Фото состояния
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
@@ -458,6 +462,38 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     }
   }, [isInitialized, messages.length]);
 
+  // Счетчик времени для обработки аудио
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isProcessingAudio) {
+      setProcessingTimer(0);
+      interval = setInterval(() => {
+        setProcessingTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      setProcessingTimer(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessingAudio]);
+
+  // Счетчик времени для обычной загрузки
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      setLoadingTimer(0);
+      interval = setInterval(() => {
+        setLoadingTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      setLoadingTimer(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading]);
+
   const handleSendMessage = async () => {
     // Проверяем что есть либо текст, либо фото
     if ((!inputMessage.trim() && !selectedPhoto) || isLoading || !selectedDay) return;
@@ -494,32 +530,47 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       
       let response: Response;
       
-      if (hasPhoto && photoFile) {
-        // Отправляем с фото как FormData
-        const formData = new FormData();
-        formData.append('userId', selectedUser.id);
-        formData.append('dayId', selectedDay.id);
-        formData.append('message', messageText);
-        formData.append('photo', photoFile);
-        formData.append('isPhoto', 'true');
-        
-        response = await fetch('/api/process-message', {
-          method: 'POST',
-          body: formData
-        });
-      } else {
-        // Отправляем как обычный JSON
-        response = await fetch('/api/process-message', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: selectedUser.id,
-            dayId: selectedDay.id,
-            message: messageText
-          })
-        });
+      // Создаем контроллер для отмены запроса при длительном ожидании
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут
+
+      try {
+        if (hasPhoto && photoFile) {
+          // Отправляем с фото как FormData
+          const formData = new FormData();
+          formData.append('userId', selectedUser.id);
+          formData.append('dayId', selectedDay.id);
+          formData.append('message', messageText);
+          formData.append('photo', photoFile);
+          formData.append('isPhoto', 'true');
+
+          response = await fetch('/api/process-message', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+          });
+        } else {
+          // Отправляем как обычный JSON
+          response = await fetch('/api/process-message', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: selectedUser.id,
+              dayId: selectedDay.id,
+              message: messageText
+            }),
+            signal: controller.signal
+          });
+        }
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error('Превышено время ожидания ответа сервера (30 сек)');
+        }
+        throw fetchError;
       }
 
       if (!response.ok) {
@@ -689,10 +740,25 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         }
       }
       
-      const response = await fetch('/api/process-message', {
-        method: 'POST',
-        body: formData
-      });
+      // Создаем контроллер для отмены запроса при длительном ожидании
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут
+
+      let response: Response;
+      try {
+        response = await fetch('/api/process-message', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Превышено время ожидания ответа сервера (30 сек)');
+        }
+        throw error;
+      }
 
       console.log('📡 Response status:', response.status, response.statusText);
 
@@ -856,7 +922,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                 <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
-              <span className="text-sm text-primary-600">Печатает...</span>
+              <span className="text-sm text-primary-600">
+                Печатает... {loadingTimer > 5 && <span className="opacity-70">({loadingTimer}с)</span>}
+              </span>
             </div>
           </motion.div>
         )}
@@ -896,7 +964,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                   transition={{ repeat: Infinity, duration: 0.8, delay: 0.4 }}
                 />
               </div>
-              <span className="text-sm text-blue-600">🎤 {t('chat.recording')}</span>
+              <span className="text-sm text-blue-600">
+                🎤 {t('chat.recording')} {processingTimer > 5 && <span className="opacity-70">({processingTimer}с)</span>}
+              </span>
             </div>
           </motion.div>
         )}

@@ -133,11 +133,27 @@ export default function DebugAudioPage() {
       formData.append('isAudio', 'true');
       
       console.log('📤 Debug: Sending to /api/process-message...');
-      
-      const response = await fetch('/api/process-message', {
-        method: 'POST',
-        body: formData
-      });
+
+      // Создаем контроллер для отмены запроса при длительном ожидании
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут
+
+      let response: Response;
+      try {
+        response = await fetch('/api/process-message', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          console.error('❌ Debug: Request timeout (30 seconds)');
+          throw new Error('Превышено время ожидания ответа сервера (30 сек)');
+        }
+        throw fetchError;
+      }
 
       console.log('📡 Debug: Response status:', response.status, response.statusText);
 
