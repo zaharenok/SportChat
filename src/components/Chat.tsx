@@ -33,6 +33,16 @@ interface WebhookResponseAudio {
   };
 }
 
+// Новый формат для n8n workflow (аудио)
+interface WebhookResponseTranscription {
+  text_transcribed: string;
+}
+
+// Новый формат для n8n workflow (фото)
+interface WebhookResponsePhoto {
+  photo_text: string;
+}
+
 interface WebhookResponseMain {
   output: {
     message: string;
@@ -49,9 +59,13 @@ interface WebhookResponseMain {
 }
 
 // Общий тип для webhook ответа
-type WebhookResponse = 
-  | WebhookResponseAudio[] 
-  | WebhookResponseMain[] 
+type WebhookResponse =
+  | WebhookResponseAudio[]
+  | WebhookResponseMain[]
+  | WebhookResponseTranscription[]
+  | WebhookResponsePhoto[]
+  | (WebhookResponseTranscription | WebhookResponseMain)[] // Комбинированный ответ для аудио
+  | (WebhookResponsePhoto | WebhookResponseMain)[] // Комбинированный ответ для фото
   | ApiResponse  // Fallback на старый формат
 
 
@@ -165,7 +179,20 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       // Ищем распознанный текст аудио и ответ ИИ в массиве
       for (const item of data) {
         console.log('🔍 Processing item:', typeof item, item);
-        // Проверяем на Response audio формат (распознанный текст)
+
+        // Проверяем на новый формат с text_transcribed (из вашего n8n workflow)
+        if (item && 'text_transcribed' in item) {
+          recognizedText = (item as { text_transcribed: string }).text_transcribed;
+          console.log('🎤 Found text_transcribed format:', recognizedText);
+        }
+
+        // Проверяем на формат с photo_text (из вашего n8n workflow для фото)
+        if (item && 'photo_text' in item) {
+          recognizedText = (item as { photo_text: string }).photo_text;
+          console.log('📷 Found photo_text format:', recognizedText);
+        }
+
+        // Проверяем на старый Response audio формат (распознанный текст)
         if (item && 'text' in item && 'usage' in item) {
           const audioItem = item as WebhookResponseAudio;
           recognizedText = audioItem.text;
