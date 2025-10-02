@@ -154,13 +154,17 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
 
   // Функция для парсинга разных форматов ответов от webhook
   const parseWebhookResponse = (data: WebhookResponse): ApiResponse => {
+    console.log('🔄 parseWebhookResponse input:', JSON.stringify(data, null, 2));
+
     // Если пришел массив ответов
     if (Array.isArray(data)) {
+      console.log('📋 Processing array response with', data.length, 'items');
       let recognizedText: string | undefined;
       let aiResponse: ApiResponse | undefined;
 
       // Ищем распознанный текст аудио и ответ ИИ в массиве
       for (const item of data) {
+        console.log('🔍 Processing item:', typeof item, item);
         // Проверяем на Response audio формат (распознанный текст)
         if (item && 'text' in item && 'usage' in item) {
           const audioItem = item as WebhookResponseAudio;
@@ -194,15 +198,20 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             workout_logged: output.workout_logged || false,
             parsed_exercises: output.parsed_exercises || []
           };
+          console.log('✅ Created aiResponse:', aiResponse);
         }
       }
 
+      console.log('🔄 After processing all items:', { recognizedText, aiResponse });
+
       // Возвращаем результат с обоими данными
       if (aiResponse) {
-        return {
+        const finalResult = {
           ...aiResponse,
           recognizedText: recognizedText // Добавляем распознанный текст
         };
+        console.log('✅ Returning aiResponse result:', finalResult);
+        return finalResult;
       } else if (recognizedText) {
         // Если только распознанный текст без ответа ИИ
         return {
@@ -775,13 +784,15 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       // Парсим ответ webhook с помощью общей функции
       console.log('🔄 Parsing webhook response...');
       const result = parseWebhookResponse(rawResult);
-      console.log('📋 Parsed result:', { 
-        recognizedText: result.recognizedText, 
-        hasMessage: !!result.message, 
+      console.log('📋 Parsed result:', {
+        recognizedText: result.recognizedText,
+        hasMessage: !!result.message,
+        message: result.message, // Показываем полное сообщение для отладки
         messageLength: result.message?.length || 0,
         suggestions: Array.isArray(result.suggestions) ? result.suggestions.length : !!result.suggestions,
         workout_logged: result.workout_logged,
-        parsed_exercises: result.parsed_exercises?.length || 0
+        parsed_exercises: result.parsed_exercises?.length || 0,
+        success: result.success
       });
       
       // Проверяем что есть минимальные данные для отображения
