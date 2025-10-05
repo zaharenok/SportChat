@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, MessageCircle, Mic, Square, Camera, Image, X } from "lucide-react";
+import { Send, MessageCircle, Mic, Square, Camera, Image, X, Paperclip } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatApi, Day, User, ChatMessage } from "@/lib/client-api";
 import { useChatContext } from "@/lib/chat-context";
@@ -97,12 +97,33 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  // Состояние выпадающего меню для вложений
+  const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadChatHistory();
   }, [selectedDay]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Закрытие выпадающего меню при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isAttachmentMenuOpen) {
+        const target = event.target as HTMLElement;
+        const attachmentButton = target.closest('.attachment-menu-container');
+        if (!attachmentButton) {
+          setIsAttachmentMenuOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAttachmentMenuOpen]);
 
   const loadChatHistory = async () => {
     if (!selectedDay) {
@@ -826,7 +847,24 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       if (!result.message && !result.recognizedText) {
         console.warn('⚠️ No message or recognized text in audio response');
         console.warn('⚠️ Raw result structure:', Object.keys(rawResult));
+        console.warn('⚠️ Parsed result details:', {
+          message: result.message,
+          recognizedText: result.recognizedText,
+          success: result.success
+        });
         throw new Error('Пустой ответ от сервера');
+      }
+
+      // Если есть только распознанный текст без AI ответа, отображаем его
+      if (result.recognizedText && !result.message) {
+        console.log('🎤 Only recognized text found, displaying it as user message');
+        addMessage({
+          text: result.recognizedText,
+          isUser: true,
+          dayId: selectedDay.id
+        });
+        // Не показываем ответ бота, так как его нет
+        return;
       }
       
       console.log('🔄 Processing message sequence...');
@@ -1036,7 +1074,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             />
           </div>
           
-          {/* Кнопки для фото */}
+          {/* Скрытый input для загрузки файлов */}
           <input
             type="file"
             accept="image/*"
@@ -1044,24 +1082,55 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
             className="hidden"
             id="photo-upload"
           />
-          
-          <button
-            onClick={() => document.getElementById('photo-upload')?.click()}
-            disabled={isLoading || isRecording}
-            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            title={t('chat.selectPhoto')}
-          >
-            <Image className="w-5 h-5" />
-          </button>
-          
-          <button
-            onClick={startCamera}
-            disabled={isLoading || isRecording}
-            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            title={t('chat.takePhoto')}
-          >
-            <Camera className="w-5 h-5" />
-          </button>
+
+          {/* Кнопка-скрепка с выпадающим меню */}
+          <div className="relative attachment-menu-container">
+            <button
+              onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+              disabled={isLoading || isRecording}
+              className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-primary-600 bg-white border-2 border-primary-200 rounded-2xl hover:bg-primary-50 hover:border-primary-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              title="Прикрепить файл"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+
+            {/* Выпадающее меню */}
+            <AnimatePresence>
+              {isAttachmentMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-2 min-w-[160px] z-50"
+                >
+                  <button
+                    onClick={() => {
+                      document.getElementById('photo-upload')?.click();
+                      setIsAttachmentMenuOpen(false);
+                    }}
+                    disabled={isLoading || isRecording}
+                    className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+                  >
+                    <Image className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm text-gray-700">{t('chat.selectPhoto')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      startCamera();
+                      setIsAttachmentMenuOpen(false);
+                    }}
+                    disabled={isLoading || isRecording}
+                    className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+                  >
+                    <Camera className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-gray-700">{t('chat.takePhoto')}</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
           {/* Кнопка записи аудио */}
           <motion.button
