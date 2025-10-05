@@ -191,6 +191,21 @@ const translations = {
     'workouts.deleteConfirmDesc': 'Это действие нельзя будет отменить',
     'workouts.delete': 'Удалить',
     
+    // Управление днями
+    'dayManager.deleteConfirmTitle': 'Удалить день тренировки?',
+    'dayManager.deleteConfirmMessage': 'Будут удалены все данные этого дня: сообщения чата, тренировки и достижения.',
+    'dayManager.deleteConfirmWarning': 'Это действие нельзя отменить.',
+    'dayManager.title': 'Управление днями',
+    'dayManager.addDay': 'Добавить день',
+    'dayManager.today': 'Сегодня',
+    'dayManager.editDay': 'Редактировать день',
+    'dayManager.deleteDay': 'Удалить день',
+    'dayManager.collapse': 'Свернуть',
+    'dayManager.expand': 'Развернуть',
+    'dayManager.noDaysCreated': 'Нет созданных дней',
+    'dayManager.noDaysDescription': 'Добавьте свой первый день тренировок',
+    'dayManager.loadingDays': 'Загрузка дней...',
+
     // Общие
     'common.loading': 'Загрузка...',
     'common.error': 'Ошибка',
@@ -392,6 +407,21 @@ const translations = {
     'workouts.deleteConfirmDesc': 'This action cannot be undone',
     'workouts.delete': 'Delete',
     
+    // Day Manager
+    'dayManager.deleteConfirmTitle': 'Delete workout day?',
+    'dayManager.deleteConfirmMessage': 'All data for this day will be deleted: chat messages, workouts and achievements.',
+    'dayManager.deleteConfirmWarning': 'This action cannot be undone.',
+    'dayManager.title': 'Day Management',
+    'dayManager.addDay': 'Add Day',
+    'dayManager.today': 'Today',
+    'dayManager.editDay': 'Edit day',
+    'dayManager.deleteDay': 'Delete day',
+    'dayManager.collapse': 'Collapse',
+    'dayManager.expand': 'Expand',
+    'dayManager.noDaysCreated': 'No days created',
+    'dayManager.noDaysDescription': 'Add your first workout day',
+    'dayManager.loadingDays': 'Loading days...',
+
     // Common
     'common.loading': 'Loading...',
     'common.error': 'Error',

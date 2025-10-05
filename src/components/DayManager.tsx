@@ -5,6 +5,7 @@ import { Calendar, Plus, Edit3, Trash2, Check, X, ChevronDown, ChevronUp } from 
 import { motion, AnimatePresence } from "framer-motion";
 import { daysApi, utils, Day, User } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/language-context";
 
 interface DayManagerProps {
   onDaySelect: (day: Day) => void;
@@ -15,6 +16,7 @@ interface DayManagerProps {
 }
 
 export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed = false, onToggleCollapse }: DayManagerProps) {
+  const { t } = useLanguage();
   const [days, setDays] = useState<Day[]>([]);
   const [loading, setLoading] = useState(true);
   const [newDate, setNewDate] = useState("");
@@ -22,6 +24,9 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
   const [editDate, setEditDate] = useState("");
   const [isAddingDay, setIsAddingDay] = useState(false);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
+
+  // Состояние для модала удаления
+  const [dayToDelete, setDayToDelete] = useState<Day | null>(null);
   
   const collapsed = isCollapsed !== undefined ? isCollapsed : internalCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(!internalCollapsed));
@@ -82,14 +87,10 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
   };
 
   const handleDeleteDay = async (dayId: string) => {
-    if (!confirm('Удалить этот день и все связанные данные? Это действие нельзя отменить.')) {
-      return;
-    }
-
     try {
       await daysApi.delete(dayId);
       setDays(prev => prev.filter(d => d.id !== dayId));
-      
+
       // Если удаляется выбранный день, выбираем другой
       if (selectedDay?.id === dayId) {
         const remainingDays = days.filter(d => d.id !== dayId);
@@ -100,10 +101,16 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
           await createTodayIfNotExists();
         }
       }
+
+      setDayToDelete(null);
     } catch (error) {
       console.error('Ошибка удаления дня:', error);
       alert('Ошибка удаления дня');
     }
+  };
+
+  const confirmDeleteDay = (day: Day) => {
+    setDayToDelete(day);
   };
 
   const startEditDay = (day: Day) => {
@@ -134,7 +141,7 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
     return (
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-primary-200">
         <div className="flex items-center justify-center py-8">
-          <div className="text-primary-600">Загрузка дней...</div>
+          <div className="text-primary-600">{t('dayManager.loadingDays')}</div>
         </div>
       </div>
     );
@@ -145,11 +152,11 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center space-x-2">
           <Calendar className="w-5 h-5 text-primary-600" />
-          <h3 className="text-sm sm:text-lg font-semibold text-gray-900">Управление днями</h3>
+          <h3 className="text-sm sm:text-lg font-semibold text-gray-900">{t('dayManager.title')}</h3>
           <button
             onClick={toggleCollapse}
             className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            title={collapsed ? "Развернуть" : "Свернуть"}
+            title={collapsed ? t('dayManager.expand') : t('dayManager.collapse')}
           >
             {collapsed ? (
               <ChevronDown className="w-4 h-4" />
@@ -165,7 +172,7 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
             className="flex items-center space-x-2 px-3 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span className="text-sm font-medium">Добавить день</span>
+            <span className="text-sm font-medium">{t('dayManager.addDay')}</span>
           </button>
         ) : !collapsed ? (
           <div className="flex items-center space-x-2">
@@ -250,7 +257,7 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
                       {utils.formatDate(day.date)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {day.date === utils.getCurrentDate() ? 'Сегодня' : day.date}
+                      {day.date === utils.getCurrentDate() ? t('dayManager.today') : day.date}
                     </p>
                   </>
                 )}
@@ -264,17 +271,17 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
                       startEditDay(day);
                     }}
                     className="p-1 text-primary-600 hover:bg-primary-100 rounded transition-colors"
-                    title="Редактировать день"
+                    title={t('dayManager.editDay')}
                   >
                     <Edit3 className="w-3 h-3" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteDay(day.id);
+                      confirmDeleteDay(day);
                     }}
                     className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                    title="Удалить день"
+                    title={t('dayManager.deleteDay')}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -287,11 +294,66 @@ export function DayManager({ onDaySelect, selectedDay, selectedUser, isCollapsed
               {days.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>Нет созданных дней</p>
-                  <p className="text-sm">Добавьте свой первый день тренировок</p>
+                  <p>{t('dayManager.noDaysCreated')}</p>
+                  <p className="text-sm">{t('dayManager.noDaysDescription')}</p>
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Модал подтверждения удаления */}
+      <AnimatePresence>
+        {dayToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setDayToDelete(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {t('dayManager.deleteConfirmTitle')}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {utils.formatDate(dayToDelete.date)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                {t('dayManager.deleteConfirmMessage')}
+                <span className="font-medium text-red-600"> {t('dayManager.deleteConfirmWarning')}</span>
+              </p>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setDayToDelete(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={() => handleDeleteDay(dayToDelete.id)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  {t('common.delete')}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
