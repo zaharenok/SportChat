@@ -22,6 +22,7 @@ interface ApiResponse {
     reps: number;
   }>;
   recognizedText?: string;
+  isFirstAudioResponse?: boolean; // Флаг для первого ответа аудио
 }
 
 // Интерфейсы для разных форматов webhook ответов
@@ -100,6 +101,10 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
 
   // Состояние выпадающего меню для вложений
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+
+  // Состояние для обработки двухэтапных аудио ответов
+  const [isWaitingForSecondResponse, setIsWaitingForSecondResponse] = useState(false);
+  const [firstAudioResponse, setFirstAudioResponse] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -190,6 +195,20 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
   // Функция для парсинга разных форматов ответов от webhook
   const parseWebhookResponse = (data: WebhookResponse): ApiResponse => {
     console.log('🔄 parseWebhookResponse input:', JSON.stringify(data, null, 2));
+
+    // НОВАЯ ЛОГИКА: Проверяем если пришел только первый ответ с text_transcribed
+    if (data && typeof data === 'object' && 'text_transcribed' in data && !('output' in data) && !Array.isArray(data)) {
+      const transcriptionData = data as WebhookResponseTranscription;
+      console.log('🎤 First audio response detected:', transcriptionData.text_transcribed);
+      return {
+        success: true,
+        recognizedText: transcriptionData.text_transcribed,
+        message: undefined, // Нет AI ответа в первом запросе
+        isFirstAudioResponse: true, // Флаг первого ответа
+        workout_logged: false,
+        parsed_exercises: []
+      };
+    }
 
     // Если пришел массив ответов
     if (Array.isArray(data)) {
@@ -658,6 +677,77 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
     }
   };
 
+  // Функция для ожидания второго ответа от webhook (полный AI ответ)
+  const waitForSecondResponse = async (formData: FormData, signal: AbortSignal): Promise<void> => {
+    console.log('⏳ Starting to wait for second webhook response...');
+
+    // Добавляем задержку перед повторным запросом (даем время n8n обработать AI ответ)
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 секунды задержки
+
+    // Делаем повторный запрос к тому же endpoint для получения полного AI ответа
+    const secondController = new AbortController();
+    const secondTimeoutId = setTimeout(() => secondController.abort(), 25000); // 25 секунд для второго ответа
+
+    try {
+      console.log('📡 Making second request for AI response...');
+      const secondResponse = await fetch('/api/process-message', {
+        method: 'POST',
+        body: formData,
+        signal: secondController.signal
+      });
+
+      clearTimeout(secondTimeoutId);
+
+      if (!secondResponse.ok) {
+        throw new Error(`Second response error ${secondResponse.status}`);
+      }
+
+      const secondRawResult = await secondResponse.json();
+      console.log('✅ Second response received:', JSON.stringify(secondRawResult, null, 2));
+
+      const secondResult = parseWebhookResponse(secondRawResult);
+
+      // Проверяем что получили полный AI ответ (не первый ответ снова)
+      if (secondResult.isFirstAudioResponse) {
+        console.log('⚠️ Received first response again, waiting more...');
+        // Если снова пришел первый ответ, делаем еще одну попытку с большей задержкой
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return waitForSecondResponse(formData, signal);
+      }
+
+      if (secondResult.message) {
+        console.log('🤖 Valid second AI response received');
+
+        // Очищаем состояние ожидания
+        setIsWaitingForSecondResponse(false);
+        const savedRecognizedText = firstAudioResponse;
+        setFirstAudioResponse(null);
+
+        // Обрабатываем полный AI ответ
+        processMessageSequence({
+          ...secondResult,
+          recognizedText: savedRecognizedText || undefined
+        });
+
+        // Уведомляем об обновлении данных
+        if (onWorkoutSaved && (secondResult.workout_logged || (secondResult.parsed_exercises && secondResult.parsed_exercises.length > 0))) {
+          console.log('🔄 Notifying about workout data update...');
+          onWorkoutSaved();
+        }
+        console.log('✅ Two-stage audio processing completed successfully');
+      } else {
+        throw new Error('Second response does not contain AI message');
+      }
+
+    } catch (error) {
+      clearTimeout(secondTimeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Превышено время ожидания второго ответа сервера');
+      }
+      throw error;
+    }
+  };
+
   // Функции для работы с аудио записью
   const startRecording = async () => {
     try {
@@ -835,11 +925,8 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
       console.log('📋 Parsed result:', {
         recognizedText: result.recognizedText,
         hasMessage: !!result.message,
-        message: result.message, // Показываем полное сообщение для отладки
+        isFirstAudioResponse: result.isFirstAudioResponse,
         messageLength: result.message?.length || 0,
-        suggestions: Array.isArray(result.suggestions) ? result.suggestions.length : !!result.suggestions,
-        workout_logged: result.workout_logged,
-        parsed_exercises: result.parsed_exercises?.length || 0,
         success: result.success
       });
       
@@ -855,15 +942,44 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         throw new Error('Пустой ответ от сервера');
       }
 
-      // Если есть только распознанный текст без AI ответа, отображаем его
-      if (result.recognizedText && !result.message) {
-        console.log('🎤 Only recognized text found, displaying it as user message');
+      // НОВАЯ ЛОГИКА: Обработка первого ответа аудио
+      if (result.isFirstAudioResponse && result.recognizedText) {
+        console.log('🎤 First audio response detected - showing recognized text');
+
+        // Показываем распознанный текст как сообщение пользователя
         addMessage({
           text: result.recognizedText,
           isUser: true,
           dayId: selectedDay.id
         });
-        // Не показываем ответ бота, так как его нет
+
+        // Сохраняем распознанный текст и ставим флаг ожидания второго ответа
+        setFirstAudioResponse(result.recognizedText);
+        setIsWaitingForSecondResponse(true);
+
+        console.log('⏳ Waiting for second AI response...');
+
+        // Начинаем ожидание второго ответа от того же webhook
+        try {
+          await waitForSecondResponse(formData, controller.signal);
+        } catch (secondError) {
+          console.error('❌ Error waiting for second response:', secondError);
+          setIsWaitingForSecondResponse(false);
+          setFirstAudioResponse(null);
+          throw secondError;
+        }
+        return;
+      }
+
+
+      // СТАРАЯ ЛОГИКА: Если есть только распознанный текст без AI ответа (старый формат)
+      if (result.recognizedText && !result.message && !result.isFirstAudioResponse) {
+        console.log('🎤 Legacy: Only recognized text found, displaying it as user message');
+        addMessage({
+          text: result.recognizedText,
+          isUser: true,
+          dayId: selectedDay.id
+        });
         return;
       }
       
@@ -1041,7 +1157,7 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
                 />
               </div>
               <span className="text-sm text-blue-600">
-                🎤 {t('chat.recording')} {processingTimer > 5 && <span className="opacity-70">({processingTimer}с)</span>}
+                🎤 {isWaitingForSecondResponse ? 'Ожидаю ответ ИИ...' : t('chat.recording')} {processingTimer > 5 && <span className="opacity-70">({processingTimer}с)</span>}
               </span>
             </div>
           </motion.div>
