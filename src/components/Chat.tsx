@@ -679,6 +679,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
 
   // Функция для ожидания второго ответа от webhook (полный AI ответ)
   const waitForSecondResponse = async (formData: FormData, signal: AbortSignal): Promise<void> => {
+    if (!selectedDay) {
+      throw new Error('No selected day for second response');
+    }
     console.log('⏳ Starting to wait for second webhook response...');
 
     // Добавляем задержку перед повторным запросом (даем время n8n обработать AI ответ)
@@ -723,7 +726,16 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
         const savedRecognizedText = firstAudioResponse;
         setFirstAudioResponse(null);
 
-        // Обрабатываем полный AI ответ
+        // СНАЧАЛА показываем распознанный текст как сообщение пользователя
+        if (savedRecognizedText) {
+          addMessage({
+            text: savedRecognizedText,
+            isUser: true,
+            dayId: selectedDay.id
+          });
+        }
+
+        // ПОТОМ обрабатываем полный AI ответ
         processMessageSequence({
           ...secondResult,
           recognizedText: savedRecognizedText || undefined
@@ -944,14 +956,9 @@ export function Chat({ selectedDay, selectedUser, onWorkoutSaved }: ChatProps) {
 
       // НОВАЯ ЛОГИКА: Обработка первого ответа аудио
       if (result.isFirstAudioResponse && result.recognizedText) {
-        console.log('🎤 First audio response detected - showing recognized text');
+        console.log('🎤 First audio response detected - NOT showing recognized text yet');
 
-        // Показываем распознанный текст как сообщение пользователя
-        addMessage({
-          text: result.recognizedText,
-          isUser: true,
-          dayId: selectedDay.id
-        });
+        // НЕ показываем распознанный текст пользователю сразу - покажем в конце с AI ответом
 
         // Сохраняем распознанный текст и ставим флаг ожидания второго ответа
         setFirstAudioResponse(result.recognizedText);
