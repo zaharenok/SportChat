@@ -190,6 +190,8 @@ const translations = {
     'workouts.confirmDelete': 'Удалить тренировку?',
     'workouts.deleteConfirmDesc': 'Это действие нельзя будет отменить',
     'workouts.delete': 'Удалить',
+    'workouts.deleteExercise': 'Удалить упражнение?',
+    'workouts.deleteExerciseDesc': 'Упражнение будет удалено из тренировки. Это действие нельзя отменить.',
     
     // Управление днями
     'dayManager.deleteConfirmTitle': 'Удалить день тренировки?',
@@ -406,6 +408,8 @@ const translations = {
     'workouts.confirmDelete': 'Delete workout?',
     'workouts.deleteConfirmDesc': 'This action cannot be undone',
     'workouts.delete': 'Delete',
+    'workouts.deleteExercise': 'Delete exercise?',
+    'workouts.deleteExerciseDesc': 'The exercise will be removed from the workout. This action cannot be undone.',
     
     // Day Manager
     'dayManager.deleteConfirmTitle': 'Delete workout day?',

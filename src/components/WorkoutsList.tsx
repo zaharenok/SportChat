@@ -30,9 +30,20 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
   const { language, t } = useLanguage();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; date: string | null }>({ 
-    show: false, 
-    date: null 
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; date: string | null }>({
+    show: false,
+    date: null
+  });
+  const [deleteExerciseConfirmation, setDeleteExerciseConfirmation] = useState<{
+    show: boolean;
+    workoutId: string | null;
+    exerciseIndex: number | null;
+    exerciseName: string | null;
+  }>({
+    show: false,
+    workoutId: null,
+    exerciseIndex: null,
+    exerciseName: null
   });
   const [editingExercise, setEditingExercise] = useState<EditingExercise | null>(null);
 
@@ -149,6 +160,65 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
 
   const handleCancelEdit = () => {
     setEditingExercise(null);
+  };
+
+  const handleDeleteExercise = (workoutId: string, exerciseIndex: number, exerciseName: string) => {
+    setDeleteExerciseConfirmation({
+      show: true,
+      workoutId,
+      exerciseIndex,
+      exerciseName
+    });
+  };
+
+  const confirmDeleteExercise = async () => {
+    const { workoutId, exerciseIndex } = deleteExerciseConfirmation;
+    if (workoutId === null || exerciseIndex === null) return;
+
+    try {
+      // Найдем тренировку для обновления
+      const workoutToUpdate = workouts.find(w => w.id === workoutId);
+      if (!workoutToUpdate) return;
+
+      // Удалим упражнение из массива
+      const updatedExercises = workoutToUpdate.exercises.filter((_, index) => index !== exerciseIndex);
+
+      if (updatedExercises.length === 0) {
+        // Если упражнений не осталось, удаляем всю тренировку
+        await workoutsApi.delete(workoutId);
+        setWorkouts(workouts.filter(w => w.id !== workoutId));
+      } else {
+        // Обновляем тренировку с оставшимися упражнениями
+        await workoutsApi.update(workoutId, {
+          exercises: updatedExercises
+        });
+
+        // Обновляем локальное состояние
+        setWorkouts(workouts.map(w =>
+          w.id === workoutId
+            ? { ...w, exercises: updatedExercises }
+            : w
+        ));
+      }
+
+      setDeleteExerciseConfirmation({
+        show: false,
+        workoutId: null,
+        exerciseIndex: null,
+        exerciseName: null
+      });
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+    }
+  };
+
+  const cancelDeleteExercise = () => {
+    setDeleteExerciseConfirmation({
+      show: false,
+      workoutId: null,
+      exerciseIndex: null,
+      exerciseName: null
+    });
   };
 
   if (loading) {
@@ -311,7 +381,7 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                               </button>
                             </div>
                           ) : (
-                            /* Кнопка редактирования - показывается при наведении на десктопе, всегда видна на мобильных */
+                            /* Кнопки редактирования и удаления - показываются при наведении на десктопе, всегда видны на мобильных */
                             <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleEditExercise(workout.id, exerciseIndex, exercise)}
@@ -319,6 +389,13 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                                 title={t('workouts.editExercise')}
                               >
                                 <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExercise(workout.id, exerciseIndex, exercise.name)}
+                                className="p-2 hover:bg-red-100 rounded-lg text-red-600 hover:text-red-700"
+                                title={t('common.delete')}
+                              >
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           )}
@@ -381,6 +458,54 @@ export function WorkoutsList({ selectedUser, updateTrigger }: WorkoutsListProps)
                 {t('workouts.delete')}
               </button>
             </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Диалог подтверждения удаления упражнения */}
+      <AnimatePresence>
+        {deleteExerciseConfirmation.show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl p-6 max-w-md w-full mx-auto shadow-xl"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('workouts.deleteExercise')}</h3>
+                  <p className="text-sm text-gray-500 capitalize">{deleteExerciseConfirmation.exerciseName}</p>
+                </div>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                {t('workouts.deleteExerciseDesc')}
+              </p>
+
+              <div className="flex space-x-3 justify-end">
+                <button
+                  onClick={cancelDeleteExercise}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={confirmDeleteExercise}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  {t('common.delete')}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
